@@ -37,6 +37,9 @@ export default function AdminTable({
   transactions: Transaction[];
 }) {
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "paid" | "pending_payment"
+  >("all");
   const [page, setPage] = useState(1);
 
   // Build a lookup: registration_code → transaction
@@ -61,17 +64,28 @@ export default function AdminTable({
     });
   }, [registrations, txMap]);
 
-  // Filter by name or registration code
+  // Filter by name, code, email and status
   const filtered = useMemo(() => {
+    let result = rows;
+
+    // Status filter
+    if (statusFilter !== "all") {
+      result = result.filter((r) => r.status === statusFilter);
+    }
+
+    // Search query
     const q = search.toLowerCase().trim();
-    if (!q) return rows;
-    return rows.filter(
-      (r) =>
-        r.full_name.toLowerCase().includes(q) ||
-        r.registration_code.toLowerCase().includes(q) ||
-        r.email.toLowerCase().includes(q),
-    );
-  }, [rows, search]);
+    if (q) {
+      result = result.filter(
+        (r) =>
+          r.full_name.toLowerCase().includes(q) ||
+          r.registration_code.toLowerCase().includes(q) ||
+          r.email.toLowerCase().includes(q),
+      );
+    }
+
+    return result;
+  }, [rows, search, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -135,8 +149,14 @@ export default function AdminTable({
         ))}
       </div>
 
-      {/* Search */}
-      <div style={{ marginBottom: 14 }}>
+      {/* Search & Filter */}
+      <div
+        style={{
+          display: "flex",
+          gap: 12,
+          marginBottom: 14,
+          flexDirection: "row",
+        }}>
         <input
           type="text"
           placeholder="Cari nama, kode registrasi, atau email..."
@@ -146,7 +166,7 @@ export default function AdminTable({
             setPage(1);
           }}
           style={{
-            width: "100%",
+            flex: 1,
             padding: "10px 14px",
             borderRadius: 8,
             border: "1px solid #cbd5e1",
@@ -155,6 +175,26 @@ export default function AdminTable({
             outline: "none",
           }}
         />
+        <select
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value as any);
+            setPage(1);
+          }}
+          style={{
+            padding: "0 14px",
+            borderRadius: 8,
+            border: "1px solid #cbd5e1",
+            fontSize: 14,
+            background: "#fff",
+            outline: "none",
+            cursor: "pointer",
+            minWidth: 140,
+          }}>
+          <option value="all">Semua Status</option>
+          <option value="paid">Lunas</option>
+          <option value="pending_payment">Pending</option>
+        </select>
       </div>
 
       {/* Table */}
@@ -174,9 +214,11 @@ export default function AdminTable({
                 "Nama",
                 "Email",
                 "Profesi",
+                "Kehadiran",
+                "Status",
                 "Metode",
                 "Jumlah",
-                "Status",
+                "Status Bayar",
                 "Tgl. Bayar",
                 "Aksi",
               ].map((h) => (
@@ -189,6 +231,7 @@ export default function AdminTable({
                     color: "#475569",
                     whiteSpace: "nowrap",
                     borderBottom: "1px solid #e2e8f0",
+                    ...(h === "Status" ? { minWidth: 130 } : {}),
                   }}>
                   {h}
                 </th>
@@ -199,7 +242,7 @@ export default function AdminTable({
             {paginated.length === 0 && (
               <tr>
                 <td
-                  colSpan={10}
+                  colSpan={12}
                   style={{
                     textAlign: "center",
                     padding: "24px",
@@ -260,6 +303,26 @@ export default function AdminTable({
                     whiteSpace: "nowrap",
                   }}>
                   {row.profession}
+                </td>
+                <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      color:
+                        row.attendance_type === "online"
+                          ? "#0891b2"
+                          : "#d97706",
+                    }}>
+                    {row.attendance_type}
+                  </span>
+                </td>
+                <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+                  <AttendanceStatusSelect
+                    code={row.registration_code}
+                    initialStatus={row.attendance_status}
+                  />
                 </td>
                 <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
                   {row.tx_method ? (
@@ -406,6 +469,73 @@ export default function AdminTable({
         </div>
       </div>
     </div>
+  );
+}
+
+// Interactive Attendance select
+function AttendanceStatusSelect({
+  code,
+  initialStatus,
+}: {
+  code: string;
+  initialStatus: any;
+}) {
+  const [status, setStatus] = useState(initialStatus || "pending");
+  const [loading, setLoading] = useState(false);
+
+  async function handleChange(newStatus: string) {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, status: newStatus }),
+      });
+      if (res.ok) {
+        setStatus(newStatus);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const bgColor =
+    status === "present"
+      ? "#dcfce7"
+      : status === "absent"
+        ? "#fee2e2"
+        : "#f1f5f9";
+  const color =
+    status === "present"
+      ? "#15803d"
+      : status === "absent"
+        ? "#b91c1c"
+        : "#64748b";
+
+  return (
+    <select
+      value={status}
+      onChange={(e) => handleChange(e.target.value)}
+      disabled={loading}
+      style={{
+        padding: "6px 10px",
+        borderRadius: "6px",
+        fontSize: "12px",
+        fontWeight: 700,
+        background: bgColor,
+        color: color,
+        border: "1px solid rgba(0,0,0,0.05)",
+        cursor: "pointer",
+        outline: "none",
+        width: "120px",
+        boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+      }}>
+      <option value="pending">Pending</option>
+      <option value="present">Hadir</option>
+      <option value="absent">Tidak Hadir</option>
+    </select>
   );
 }
 

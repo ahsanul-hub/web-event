@@ -2,10 +2,13 @@ import { getLoggedInAdminId } from "@/lib/auth";
 import { getAllRegistrations, getTransactions } from "@/lib/registrations";
 import AdminLogoutButton from "@/components/AdminLogoutButton";
 import AdminTable from "@/components/AdminTable";
+import { redirect } from "next/navigation";
 
 export default async function AdminPage() {
-  await getLoggedInAdminId();
-  // If auth is enforced: if (!adminId) redirect('/admin/login');
+  const adminId = await getLoggedInAdminId();
+  if (!adminId) {
+    redirect("/admin/login");
+  }
 
   const registrations = await getAllRegistrations();
   const transactions = await getTransactions();

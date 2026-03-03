@@ -10,6 +10,8 @@ export type Registration = {
   institution: string;
   kota_asal: string;
   profession: string;
+  attendance_type: "online" | "offline";
+  attendance_status: "pending" | "present" | "absent";
   tour_ikn: boolean;
   additional_info: string;
   registration_code: string;

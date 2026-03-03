@@ -148,3 +148,17 @@ export async function getTransactions(): Promise<Transaction[]> {
   );
   return result.rows;
 }
+
+export async function updateAttendanceStatus(
+  code: string,
+  status: "pending" | "present" | "absent",
+): Promise<Registration | null> {
+  const result = await pool.query<Registration>(
+    `UPDATE registrations
+     SET attendance_status = $1, updated_at = NOW()
+     WHERE registration_code = $2
+     RETURNING *`,
+    [status, code],
+  );
+  return result.rows[0] ?? null;
+}
