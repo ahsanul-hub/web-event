@@ -78,9 +78,13 @@ export default function AdminTable({
     if (q) {
       result = result.filter(
         (r) =>
-          r.full_name.toLowerCase().includes(q) ||
-          r.registration_code.toLowerCase().includes(q) ||
-          r.email.toLowerCase().includes(q),
+          r.full_name?.toLowerCase().includes(q) ||
+          r.registration_code?.toLowerCase().includes(q) ||
+          r.email?.toLowerCase().includes(q) ||
+          r.institution?.toLowerCase().includes(q) ||
+          r.profession?.toLowerCase().includes(q) ||
+          (r.tx_method && r.tx_method.toLowerCase().includes(q)) ||
+          (r.tx_amount && String(r.tx_amount).includes(search)),
       );
     }
 
@@ -155,7 +159,7 @@ export default function AdminTable({
           display: "flex",
           gap: 12,
           marginBottom: 14,
-          flexDirection: "row",
+          alignItems: "center",
         }}>
         <input
           type="text"
@@ -182,14 +186,14 @@ export default function AdminTable({
             setPage(1);
           }}
           style={{
-            padding: "0 14px",
+            padding: "10px 14px",
             borderRadius: 8,
             border: "1px solid #cbd5e1",
             fontSize: 14,
             background: "#fff",
             outline: "none",
             cursor: "pointer",
-            minWidth: 140,
+            width: "180px",
           }}>
           <option value="all">Semua Status</option>
           <option value="paid">Lunas</option>
