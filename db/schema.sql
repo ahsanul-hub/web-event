@@ -8,13 +8,20 @@ CREATE TABLE IF NOT EXISTS admins (
 
 CREATE TABLE IF NOT EXISTS registrations (
   id SERIAL PRIMARY KEY,
+  nama_ktp TEXT NOT NULL,
   full_name TEXT NOT NULL,
+  nik TEXT NOT NULL,
   email TEXT NOT NULL UNIQUE,
   phone TEXT NOT NULL,
   institution TEXT NOT NULL,
+  kota_asal TEXT NOT NULL DEFAULT '',
   profession TEXT NOT NULL,
+  tour_ikn BOOLEAN NOT NULL DEFAULT FALSE,
+  additional_info TEXT NOT NULL DEFAULT '',
   registration_code TEXT NOT NULL UNIQUE,
   status TEXT NOT NULL DEFAULT 'pending_payment',
+  attendance_status TEXT NOT NULL DEFAULT 'pending',
+  attendance_type TEXT NOT NULL DEFAULT 'online',
   payment_link TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

@@ -1,12 +1,17 @@
-export type RegistrationStatus = 'pending_payment' | 'paid';
+export type RegistrationStatus = "pending_payment" | "paid";
 
 export type Registration = {
   id: number;
+  nama_ktp: string;
   full_name: string;
+  nik: string;
   email: string;
   phone: string;
   institution: string;
+  kota_asal: string;
   profession: string;
+  tour_ikn: boolean;
+  additional_info: string;
   registration_code: string;
   status: RegistrationStatus;
   payment_link: string;
@@ -22,7 +27,7 @@ export type Transaction = {
   payer_email: string;
   amount: string;
   payment_method: string;
-  status: 'success';
+  status: "success";
   paid_at: string;
   created_at: string;
 };
