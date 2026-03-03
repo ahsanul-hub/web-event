@@ -65,6 +65,12 @@ export default function PaymentActions({
         setLoading(false);
         return;
       }
+
+      // Automatically open the new payment link in a new tab
+      if (data.paymentUrl) {
+        window.open(data.paymentUrl, "_blank");
+      }
+
       window.location.reload();
     } catch {
       setError("Terjadi kesalahan jaringan.");
@@ -163,7 +169,7 @@ export default function PaymentActions({
                 flex: "1 1 150px",
                 marginTop: "0",
               }}>
-              {loading ? "Memproses..." : "Buat Tagihan"}
+              {loading ? "Memproses..." : "Bayar"}
             </button>
           </div>
           {!isFallbackLink && (

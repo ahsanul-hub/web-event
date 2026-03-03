@@ -13,6 +13,7 @@ const bodySchema = z.object({
   institution: z.string().min(2),
   kotaAsal: z.string().min(2),
   profession: z.string().min(2),
+  attendanceType: z.string().min(2),
   paymentMethod: z.string().min(2),
   tourIkn: z.boolean().optional(),
   additionalInfo: z.string().optional(),
@@ -22,11 +23,7 @@ const PRICING_MAP: Record<string, number> = {
   "Dokter Spesialis Patologi Klinik": 500000,
   "Dokter Spesialis Lainnya": 400000,
   "Dokter Umum": 300000,
-  "PPDS Patologi Klinik": 250000,
-  "Analis Laboratorium": 250000,
-  Perawat: 250000,
-  Mahasiswa: 200000,
-  Lainnya: 250000,
+  ATLM: 250000,
 };
 
 export async function POST(req: Request) {

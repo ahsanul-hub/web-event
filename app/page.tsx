@@ -60,127 +60,30 @@ export default function HomePage() {
         <div className="hero-card">
           {/* Logo bar */}
           <div className="hero-logo-bar">
-            {/* Kemenkes logo placeholder */}
-            <svg
-              width="44"
-              height="44"
-              viewBox="0 0 44 44"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg">
-              <circle cx="22" cy="22" r="22" fill="#008000" />
-              <text
-                x="50%"
-                y="54%"
-                dominantBaseline="middle"
-                textAnchor="middle"
-                fill="white"
-                fontSize="8"
-                fontWeight="bold"
-                fontFamily="Arial">
-                Kemenkes
-              </text>
-            </svg>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "flex-start",
-              }}>
-              <span
-                style={{
-                  fontSize: "0.6rem",
-                  fontWeight: 700,
-                  color: "#166534",
-                  lineHeight: 1.2,
-                }}>
-                KEMENTERIAN
-              </span>
-              <span
-                style={{
-                  fontSize: "0.6rem",
-                  fontWeight: 700,
-                  color: "#166534",
-                  lineHeight: 1.2,
-                }}>
-                KESEHATAN
-              </span>
-              <span
-                style={{
-                  fontSize: "0.6rem",
-                  fontWeight: 700,
-                  color: "#166534",
-                  lineHeight: 1.2,
-                }}>
-                REPUBLIK INDONESIA
-              </span>
-            </div>
+            {/* Kemenkes logo */}
+            <img
+              src="/assets/Kemenkes.png"
+              alt="Logo Kemenkes"
+              style={{ height: "48px", objectFit: "contain" }}
+            />
+
             <div className="hero-logo-divider" />
-            {/* PDS Patklin logo placeholder */}
-            <svg
-              width="52"
-              height="52"
-              viewBox="0 0 52 52"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg">
-              <circle
-                cx="26"
-                cy="26"
-                r="25"
-                fill="#0f2a83"
-                stroke="#ccc"
-                strokeWidth="1"
-              />
-              <text
-                x="50%"
-                y="42%"
-                dominantBaseline="middle"
-                textAnchor="middle"
-                fill="#87d300"
-                fontSize="6.5"
-                fontWeight="bold"
-                fontFamily="Arial">
-                PDS
-              </text>
-              <text
-                x="50%"
-                y="57%"
-                dominantBaseline="middle"
-                textAnchor="middle"
-                fill="white"
-                fontSize="5.5"
-                fontWeight="bold"
-                fontFamily="Arial">
-                PATKLIN
-              </text>
-            </svg>
+
+            {/* PDS Patklin logo */}
+            <img
+              src="/assets/Patklin.png"
+              alt="Logo PDS Patklin"
+              style={{ height: "52px", objectFit: "contain" }}
+            />
+
             <div className="hero-logo-divider" />
-            {/* IDI logo placeholder */}
-            <svg
-              width="52"
-              height="52"
-              viewBox="0 0 52 52"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg">
-              <circle
-                cx="26"
-                cy="26"
-                r="25"
-                fill="#c0392b"
-                stroke="#ccc"
-                strokeWidth="1"
-              />
-              <text
-                x="50%"
-                y="50%"
-                dominantBaseline="middle"
-                textAnchor="middle"
-                fill="white"
-                fontSize="9"
-                fontWeight="bold"
-                fontFamily="Arial">
-                IDI
-              </text>
-            </svg>
+
+            {/* IDI logo */}
+            <img
+              src="/assets/IDI.png"
+              alt="Logo IDI"
+              style={{ height: "44px", objectFit: "contain" }}
+            />
           </div>
 
           {/* Main headings */}
@@ -333,11 +236,20 @@ export default function HomePage() {
           <h3>Alur Pendaftaran</h3>
           <ol>
             <li>Isi formulir pendaftaran dengan lengkap dan benar.</li>
-            <li>Anda akan diarahkan ke halaman detail pembayaran.</li>
-            <li>Lakukan pembayaran melalui tautan yang tersedia.</li>
             <li>
-              Setelah status sukses, sistem menampilkan notifikasi cek kode
-              registrasi di email.
+              Pilih Tipe Kehadiran (Online / Offline) dan lakukan pembayaran.
+            </li>
+            <li>
+              Anda akan menerima **Kode Registrasi** melalui email setelah
+              pembayaran sukses.
+            </li>
+            <li>
+              **Peserta Online**: Kode digunakan untuk konfirmasi saat bergabung
+              di Zoom Meeting.
+            </li>
+            <li>
+              **Peserta Offline**: Tunjukkan Kode Registrasi kepada panitia saat
+              registrasi ulang di lokasi (On-site).
             </li>
           </ol>
         </div>

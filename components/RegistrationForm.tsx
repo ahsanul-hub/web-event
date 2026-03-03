@@ -12,6 +12,7 @@ type FormState = {
   email: string;
   phone: string;
   profession: string;
+  attendanceType: string;
   paymentMethod: string;
   tourIkn: boolean;
   additionalInfo: string;
@@ -25,9 +26,10 @@ const initialState: FormState = {
   kotaAsal: "",
   email: "",
   phone: "",
-  profession: "Analis Laboratorium",
+  profession: "Dokter Umum",
+  attendanceType: "offline",
   paymentMethod: "qris",
-  tourIkn: false,
+  tourIkn: true,
   additionalInfo: "",
 };
 
@@ -35,23 +37,20 @@ const PROFESSIONS = [
   "Dokter Spesialis Patologi Klinik",
   "Dokter Spesialis Lainnya",
   "Dokter Umum",
-  "PPDS Patologi Klinik",
-  "Analis Laboratorium",
-  "Perawat",
-  "Mahasiswa",
-  "Lainnya",
+  "ATLM",
 ];
 
 const PRICING_MAP: Record<string, number> = {
   "Dokter Spesialis Patologi Klinik": 500000,
   "Dokter Spesialis Lainnya": 400000,
   "Dokter Umum": 300000,
-  "PPDS Patologi Klinik": 250000,
-  "Analis Laboratorium": 250000,
-  Perawat: 250000,
-  Mahasiswa: 200000,
-  Lainnya: 250000,
+  ATLM: 250000,
 };
+
+const ATTENDANCE_TYPES = [
+  { value: "offline", label: "Luring (Offline)" },
+  { value: "online", label: "Daring (Online)" },
+];
 
 const PAYMENT_METHODS = [
   { value: "qris", label: "QRIS" },
@@ -226,35 +225,56 @@ export default function RegistrationForm() {
           <p className="form-hint">Gunakan format: 08xxxxxxxxxx atau +62xxx</p>
         </div>
 
-        {/* Kategori/Profesi */}
-        <div className="form-group">
-          <label>
-            Kategori <span className="required">*</span>
-          </label>
-          <select
-            name="profession"
-            required
-            value={form.profession}
-            onChange={handleChange}>
-            <option value="" disabled>
-              Pilih kategori
-            </option>
-            {PROFESSIONS.map((p) => (
-              <option key={p} value={p}>
-                {p}
+        <div className="grid">
+          {/* Kategori/Profesi */}
+          <div className="form-group">
+            <label>
+              Kategori <span className="required">*</span>
+            </label>
+            <select
+              name="profession"
+              required
+              value={form.profession}
+              onChange={handleChange}>
+              <option value="" disabled>
+                Pilih kategori
               </option>
-            ))}
-          </select>
-          <p className="form-hint">
-            Harga tiket:{" "}
-            <b>
-              {new Intl.NumberFormat("id-ID", {
-                style: "currency",
-                currency: "IDR",
-                maximumFractionDigits: 0,
-              }).format(currentPrice)}
-            </b>
-          </p>
+              {PROFESSIONS.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+            <p className="form-hint">
+              Harga tiket:{" "}
+              <b>
+                {new Intl.NumberFormat("id-ID", {
+                  style: "currency",
+                  currency: "IDR",
+                  maximumFractionDigits: 0,
+                }).format(currentPrice)}
+              </b>
+            </p>
+          </div>
+
+          {/* Tipe Kehadiran */}
+          <div className="form-group">
+            <label>
+              Tipe Kehadiran <span className="required">*</span>
+            </label>
+            <select
+              name="attendanceType"
+              required
+              value={form.attendanceType}
+              onChange={handleChange}>
+              {ATTENDANCE_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+            <p className="form-hint">Pilih metode kehadiran Anda</p>
+          </div>
         </div>
 
         {/* Metode Pembayaran */}
@@ -280,7 +300,7 @@ export default function RegistrationForm() {
         </div>
 
         {/* Tour IKN Checkbox */}
-        <label className="tour-checkbox-box" htmlFor="tourIkn">
+        {/* <label className="tour-checkbox-box" htmlFor="tourIkn">
           <input
             id="tourIkn"
             type="checkbox"
@@ -298,7 +318,7 @@ export default function RegistrationForm() {
               terpisah.
             </span>
           </div>
-        </label>
+        </label> */}
 
         {/* Informasi Tambahan */}
         <div className="form-group">

@@ -11,6 +11,7 @@ type Input = {
   email: string;
   phone: string;
   profession: string;
+  attendanceType: string;
   tourIkn?: boolean;
   additionalInfo?: string;
 };
@@ -23,8 +24,8 @@ export async function createRegistration(input: Input): Promise<Registration> {
 
   const result = await pool.query<Registration>(
     `INSERT INTO registrations
-      (nama_ktp, full_name, nik, email, phone, institution, kota_asal, profession, tour_ikn, additional_info, registration_code, payment_link)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+      (nama_ktp, full_name, nik, email, phone, institution, kota_asal, profession, attendance_type, tour_ikn, additional_info, registration_code, payment_link)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
      RETURNING *`,
     [
       input.namaKtp,
@@ -35,6 +36,7 @@ export async function createRegistration(input: Input): Promise<Registration> {
       input.institution,
       input.kotaAsal,
       input.profession,
+      input.attendanceType,
       input.tourIkn ?? false,
       input.additionalInfo ?? "",
       code,
