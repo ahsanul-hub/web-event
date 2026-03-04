@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createRegistration, updatePaymentLink } from "@/lib/registrations";
+import {
+  createRegistration,
+  updatePaymentLink,
+  upsertTransaction,
+  isNIKWhitelisted,
+} from "@/lib/registrations";
+import { pool } from "@/lib/db";
 import { sendRegistrationEmail } from "@/lib/email";
 import { createRedpayOrder } from "@/lib/redpay";
 
@@ -34,24 +40,72 @@ export async function POST(req: Request) {
     // Create initial registration record
     const registration = await createRegistration(validated);
 
-    const amount = PRICING_MAP[validated.profession] || 250000;
+    // 1. Check for NIK Whitelist
+    const isWhitelisted = await isNIKWhitelisted(validated.nik);
+    const amount = isWhitelisted
+      ? 0
+      : PRICING_MAP[validated.profession] || 250000;
 
-    try {
-      // Create order via Redpay API immediately
-      const paymentUrl = await createRedpayOrder(
-        registration,
-        amount,
-        validated.paymentMethod,
+    if (isWhitelisted) {
+      // Direct Success for Whitelisted NIK
+      await pool.query(
+        "UPDATE registrations SET status = 'paid', updated_at = NOW() WHERE registration_code = $1",
+        [registration.registration_code],
       );
 
-      // Update registration with the actual Redpay link
-      await updatePaymentLink(registration.registration_code, paymentUrl);
+      // Update local object for email
+      registration.status = "paid";
 
-      // Update registration object for email
-      registration.payment_link = paymentUrl;
-    } catch (redpayError) {
-      console.error("Gagal membuat order Redpay otomatis:", redpayError);
-      // We still proceed even if Redpay fails, user can generate link manually later in detail page
+      await upsertTransaction({
+        registration_id: registration.id,
+        registration_code: registration.registration_code,
+        payer_name: registration.full_name,
+        payer_email: registration.email,
+        amount: 0,
+        payment_method: "whitelist",
+        status: "success",
+      });
+
+      console.log(
+        `✨ Whitelisted NIK detected: ${validated.nik}. Registration ${registration.registration_code} marked as PAID.`,
+      );
+    } else {
+      // standard Redpay flow
+      try {
+        // Create order via Redpay API immediately
+        const paymentUrl = await createRedpayOrder(
+          {
+            id: registration.id,
+            full_name: registration.full_name,
+            phone: registration.phone,
+            registration_code: registration.registration_code,
+            category: registration.profession, // Map profession to category
+            nik: registration.nik,
+          },
+          amount,
+          validated.paymentMethod,
+        );
+
+        // Initialize transaction record as 'pending'
+        await upsertTransaction({
+          registration_id: registration.id,
+          registration_code: registration.registration_code,
+          payer_name: registration.full_name,
+          payer_email: registration.email,
+          amount: amount,
+          payment_method: validated.paymentMethod,
+          status: "pending",
+        });
+
+        // Update registration with the actual Redpay link
+        await updatePaymentLink(registration.registration_code, paymentUrl);
+
+        // Update registration object for email
+        registration.payment_link = paymentUrl;
+      } catch (redpayError) {
+        console.error("Gagal membuat order Redpay otomatis:", redpayError);
+        // We still proceed even if Redpay fails, user can generate link manually later in detail page
+      }
     }
 
     try {
@@ -64,8 +118,8 @@ export async function POST(req: Request) {
       message: "Pendaftaran berhasil",
       registrationCode: registration.registration_code,
     });
-  } catch (error) {
-    console.error(error);
+  } catch (error: any) {
+    console.error("REGISTRATION ERROR:", error);
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         {
@@ -77,7 +131,10 @@ export async function POST(req: Request) {
       );
     }
     return NextResponse.json(
-      { message: "Terjadi kesalahan sistem atau email sudah terdaftar." },
+      {
+        message: `Terjadi kesalahan sistem: ${error.message || "Unknown error"}. Jika email sudah terdaftar, gunakan menu cari pendaftaran.`,
+        debug: process.env.NODE_ENV === "development" ? error : undefined,
+      },
       { status: 400 },
     );
   }

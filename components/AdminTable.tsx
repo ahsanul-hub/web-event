@@ -219,7 +219,7 @@ export default function AdminTable({
                 "Email",
                 "Profesi",
                 "Kehadiran",
-                "Status",
+                "Status Kehadiran",
                 "Metode",
                 "Jumlah",
                 "Status Bayar",

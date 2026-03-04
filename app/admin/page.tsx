@@ -2,6 +2,7 @@ import { getLoggedInAdminId } from "@/lib/auth";
 import { getAllRegistrations, getTransactions } from "@/lib/registrations";
 import AdminLogoutButton from "@/components/AdminLogoutButton";
 import AdminTable from "@/components/AdminTable";
+import WhitelistManager from "@/components/WhitelistManager";
 import { redirect } from "next/navigation";
 
 export default async function AdminPage() {
@@ -101,6 +102,8 @@ export default async function AdminPage() {
               registrations={registrations}
               transactions={transactions}
             />
+
+            <WhitelistManager />
           </section>
         </main>
       </div>

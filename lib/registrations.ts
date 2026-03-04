@@ -52,7 +52,7 @@ export async function updatePaymentLink(
   newPaymentLink: string,
 ): Promise<void> {
   await pool.query(
-    `UPDATE registrations SET payment_link = $1 WHERE registration_code = $2`,
+    `UPDATE registrations SET payment_link = $1, updated_at = NOW() WHERE registration_code = $2`,
     [newPaymentLink, code],
   );
 }
@@ -74,6 +74,40 @@ export async function getAllRegistrations(): Promise<Registration[]> {
   return result.rows;
 }
 
+export async function upsertTransaction(data: {
+  registration_id: number;
+  registration_code: string;
+  payer_name: string;
+  payer_email: string;
+  amount: number;
+  payment_method: string;
+  status: string;
+}): Promise<void> {
+  await pool.query(
+    `INSERT INTO transactions
+       (registration_id, registration_code, payer_name, payer_email, amount, payment_method, status, paid_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+     ON CONFLICT (registration_id)
+     DO UPDATE SET
+       registration_code = EXCLUDED.registration_code,
+       payer_name = EXCLUDED.payer_name,
+       payer_email = EXCLUDED.payer_email,
+       amount = EXCLUDED.amount,
+       payment_method = EXCLUDED.payment_method,
+       status = EXCLUDED.status,
+       paid_at = CASE WHEN EXCLUDED.status = 'success' THEN NOW() ELSE transactions.paid_at END`,
+    [
+      data.registration_id,
+      data.registration_code,
+      data.payer_name,
+      data.payer_email,
+      data.amount,
+      data.payment_method,
+      data.status,
+    ],
+  );
+}
+
 export async function markAsPaid(code: string): Promise<Registration | null> {
   const client = await pool.connect();
   try {
@@ -93,20 +127,15 @@ export async function markAsPaid(code: string): Promise<Registration | null> {
       return null;
     }
 
-    await client.query(
-      `INSERT INTO transactions (registration_id, registration_code, payer_name, payer_email, amount, payment_method, status)
-       VALUES ($1,$2,$3,$4,$5,$6,'success')
-       ON CONFLICT (registration_id)
-       DO UPDATE SET status = EXCLUDED.status, paid_at = NOW()`,
-      [
-        registration.id,
-        registration.registration_code,
-        registration.full_name,
-        registration.email,
-        0,
-        "manual_transfer",
-      ],
-    );
+    await upsertTransaction({
+      registration_id: registration.id,
+      registration_code: registration.registration_code,
+      payer_name: registration.full_name,
+      payer_email: registration.email,
+      amount: 0, // Manual update usually doesn't track amount unless specified
+      payment_method: "manual_transfer",
+      status: "success",
+    });
 
     await client.query("COMMIT");
     return registration;
@@ -161,4 +190,44 @@ export async function updateAttendanceStatus(
     [status, code],
   );
   return result.rows[0] ?? null;
+}
+
+export async function getTransactionByCode(
+  code: string,
+): Promise<Transaction | null> {
+  const result = await pool.query<Transaction>(
+    "SELECT * FROM transactions WHERE registration_code = $1 LIMIT 1",
+    [code],
+  );
+  return result.rows[0] ?? null;
+}
+export async function isNIKWhitelisted(nik: string): Promise<boolean> {
+  const result = await pool.query(
+    "SELECT 1 FROM nik_whitelist WHERE nik = $1 LIMIT 1",
+    [nik],
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+export async function getNIKWhitelist(): Promise<
+  { nik: string; description: string; created_at: string }[]
+> {
+  const result = await pool.query(
+    "SELECT * FROM nik_whitelist ORDER BY created_at DESC",
+  );
+  return result.rows;
+}
+
+export async function addToWhitelist(
+  nik: string,
+  description: string,
+): Promise<void> {
+  await pool.query(
+    "INSERT INTO nik_whitelist (nik, description) VALUES ($1, $2) ON CONFLICT (nik) DO UPDATE SET description = EXCLUDED.description",
+    [nik, description],
+  );
+}
+
+export async function removeFromWhitelist(nik: string): Promise<void> {
+  await pool.query("DELETE FROM nik_whitelist WHERE nik = $1", [nik]);
 }

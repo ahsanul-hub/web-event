@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import type { Registration, Transaction } from "@/lib/types";
+import ReceiptButton from "./ReceiptButton";
+import CountdownTimer from "./CountdownTimer";
 
 const PAYMENT_METHODS = [
   { value: "qris", label: "QRIS" },
@@ -16,33 +18,47 @@ const PAYMENT_METHODS = [
 ];
 
 export default function PaymentActions({
-  code,
-  paymentLink,
-  status,
+  registration,
+  transaction,
 }: {
-  code: string;
-  paymentLink: string;
-  status: string;
+  registration: Registration;
+  transaction?: Transaction | null;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("qris");
   const [showNewLink, setShowNewLink] = useState(false);
-  const router = useRouter();
 
-  // If already paid — no buttons needed, prevent double payment
+  const {
+    registration_code: code,
+    payment_link: paymentLink,
+    status,
+  } = registration;
+
+  // If already paid — Show receipt download
   if (status === "paid") {
     return (
-      <div
-        style={{
-          background: "#f0fdf4",
-          border: "1px solid #bbf7d0",
-          borderRadius: "8px",
-          padding: "16px 20px",
-          color: "#15803d",
-          fontWeight: 600,
-        }}>
-        Pembayaran telah dikonfirmasi. Terima kasih!
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        <div
+          style={{
+            background: "#f0fdf4",
+            border: "1px solid #bbf7d0",
+            borderRadius: "12px",
+            padding: "16px 20px",
+            color: "#15803d",
+            fontWeight: 600,
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+          }}>
+          <span style={{ fontSize: "20px" }}>✔️</span> Pembayaran Telah Diterima
+        </div>
+
+        <ReceiptButton registration={registration} transaction={transaction} />
+
+        <p style={{ textAlign: "center", fontSize: "13px", color: "#64748b" }}>
+          Klik tombol di atas untuk mengunduh kwitansi resmi pendaftaran Anda.
+        </p>
       </div>
     );
   }
@@ -80,8 +96,19 @@ export default function PaymentActions({
 
   const showGenerateForm = isFallbackLink || showNewLink;
 
+  // Determine actual payment method for the timer
+  // Use transaction.payment_method if available, otherwise use initial registration payment link context if possible
+  const currentMethod = transaction?.payment_method || "qris";
+
   return (
     <div style={{ display: "flex", gap: 16, flexDirection: "column" }}>
+      {status === "pending_payment" && (
+        <CountdownTimer
+          startTime={registration.updated_at || registration.created_at}
+          method={currentMethod}
+        />
+      )}
+
       {/* Payment link button — only when a valid Redpay URL exists */}
       {!isFallbackLink && (
         <a

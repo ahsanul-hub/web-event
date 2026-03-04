@@ -30,6 +30,8 @@ export async function createRedpayOrder(
     full_name: string;
     phone: string;
     registration_code: string;
+    category: string;
+    nik: string;
   },
   amount: number = 10000,
   paymentMethod: string = "qris",
@@ -54,13 +56,13 @@ export async function createRedpayOrder(
   // Define Request Payload
   const payload = {
     redirect_url: `${appUrl}/success`,
-    user_id: `USER-${registration.id}`,
+    user_id: registration.nik,
     user_mdn: registration.phone || "-",
     merchant_transaction_id: merchantTxId,
     payment_method: paymentMethod,
     currency: "IDR",
     amount: amount,
-    item_name: "PAYMENT",
+    item_name: registration.category,
     customer_name: registration.full_name,
     notification_url: `${appUrl}/api/webhook/redpay`,
   };

@@ -159,11 +159,16 @@ export default function RegistrationForm() {
           </label>
           <input
             name="nik"
+            type="text"
             required
             maxLength={16}
-            placeholder="Masukkan NIK Anda"
+            pattern="\d{16}"
+            placeholder="Masukkan 16 digit NIK Anda"
             value={form.nik}
-            onChange={handleChange}
+            onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, "").slice(0, 16);
+              setForm({ ...form, nik: val });
+            }}
           />
         </div>
 

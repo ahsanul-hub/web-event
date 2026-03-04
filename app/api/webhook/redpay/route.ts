@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/lib/db";
+import { upsertTransaction } from "@/lib/registrations";
+import { sendRegistrationEmail } from "@/lib/email";
+import { Registration } from "@/lib/types";
 
 /**
  * Redpay Payment Gateway Webhook Handler
- *
- * Called by Redpay when a payment status changes.
  */
 export async function POST(req: Request) {
   try {
@@ -33,14 +34,14 @@ export async function POST(req: Request) {
     const registrationCode =
       parts.length > 3
         ? parts.slice(0, 3).join("-") // Strip the hex suffix
-        : merchant_transaction_id; // Original first-time transaction ID
+        : merchant_transaction_id;
 
     console.log(
       `Webhook: merchant_transaction_id=${merchant_transaction_id} → registrationCode=${registrationCode}`,
     );
 
     // Status 1000 = success per Redpay docs
-    const isPaid = status === "success" || Number(status_code) === 1000;
+    const isPaid = Number(status_code) === 1000;
 
     if (isPaid) {
       // 1. Mark registration as paid
@@ -50,36 +51,35 @@ export async function POST(req: Request) {
         [registrationCode],
       );
 
-      // 2. Upsert transaction record
-      const regResult = await pool.query(
-        `SELECT id, full_name, email FROM registrations WHERE registration_code = $1 LIMIT 1`,
+      // 2. Fetch updated registration details for transaction and email
+      const regResult = await pool.query<Registration>(
+        `SELECT * FROM registrations WHERE registration_code = $1 LIMIT 1`,
         [registrationCode],
       );
       const reg = regResult.rows[0];
 
       if (reg) {
-        await pool.query(
-          `INSERT INTO transactions
-             (registration_id, registration_code, payer_name, payer_email, amount, payment_method, status)
-           VALUES ($1,$2,$3,$4,$5,$6,'success')
-           ON CONFLICT (registration_id)
-           DO UPDATE SET
-             status = 'success',
-             amount = EXCLUDED.amount,
-             payment_method = EXCLUDED.payment_method,
-             paid_at = NOW()`,
-          [
-            reg.id,
-            registrationCode,
-            reg.full_name,
-            reg.email,
-            parseFloat(amount) || 0,
-            payment_method || "redpay",
-          ],
-        );
+        // 3. Upsert transaction record as success
+        await upsertTransaction({
+          registration_id: reg.id,
+          registration_code: registrationCode,
+          payer_name: reg.full_name,
+          payer_email: reg.email,
+          amount: parseFloat(amount) || 0,
+          payment_method: payment_method || "redpay",
+          status: "success",
+        });
+
+        // 4. Send payment confirmation email
+        try {
+          await sendRegistrationEmail(reg);
+          console.log(`📧 Confirmation email sent to: ${reg.email}`);
+        } catch (emailError) {
+          console.error("Failed to send confirmation email:", emailError);
+        }
 
         console.log(
-          `✅ Payment confirmed via webhook: ${registrationCode} (Redpay ref: ${reference_id})`,
+          `✅ Payment confirmed via webhook: ${registrationCode} (Ref: ${reference_id})`,
         );
       } else {
         console.warn(`⚠️ No registration found for code: ${registrationCode}`);

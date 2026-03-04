@@ -1,5 +1,8 @@
 import PaymentActions from "@/components/PaymentActions";
-import { getRegistrationByCode } from "@/lib/registrations";
+import {
+  getRegistrationByCode,
+  getTransactionByCode,
+} from "@/lib/registrations";
 import Link from "next/link";
 
 export default async function PaymentPage({
@@ -8,6 +11,9 @@ export default async function PaymentPage({
   params: { code: string };
 }) {
   const registration = await getRegistrationByCode(params.code);
+  const transaction = registration
+    ? await getTransactionByCode(params.code)
+    : null;
 
   if (!registration) {
     return (
@@ -134,9 +140,8 @@ export default async function PaymentPage({
           )}
 
           <PaymentActions
-            code={registration.registration_code}
-            paymentLink={registration.payment_link}
-            status={registration.status}
+            registration={registration}
+            transaction={transaction}
           />
 
           <div
