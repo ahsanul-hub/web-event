@@ -1,14 +1,64 @@
 import { NextResponse } from "next/server";
+import { headers } from "next/headers";
 import { pool } from "@/lib/db";
 import { upsertTransaction } from "@/lib/registrations";
 import { sendRegistrationEmail } from "@/lib/email";
 import { Registration } from "@/lib/types";
 
 /**
+ * IP addresses allowed to call this webhook.
+ * Override via REDPAY_ALLOWED_IPS env var (comma-separated).
+ * Example: REDPAY_ALLOWED_IPS="103.28.146.0/24,103.28.147.10"
+ */
+const DEFAULT_ALLOWED_IPS: string[] = [
+  // Add Redpay payment gateway IP addresses here
+  // "103.x.x.x",
+];
+
+function getAllowedIPs(): string[] {
+  const envIPs = process.env.REDPAY_ALLOWED_IPS;
+  if (envIPs) {
+    return envIPs
+      .split(",")
+      .map((ip) => ip.trim())
+      .filter(Boolean);
+  }
+  return DEFAULT_ALLOWED_IPS;
+}
+
+function getClientIP(headersList: Headers): string {
+  // X-Forwarded-For may contain a chain: "client, proxy1, proxy2"
+  const forwarded = headersList.get("x-forwarded-for");
+  if (forwarded) {
+    return forwarded.split(",")[0].trim();
+  }
+  return headersList.get("x-real-ip") ?? "";
+}
+
+function isIPAllowed(ip: string, allowedIPs: string[]): boolean {
+  // If whitelist is empty, allow all (useful during development)
+  if (allowedIPs.length === 0) return true;
+  return allowedIPs.includes(ip);
+}
+
+/**
  * Redpay Payment Gateway Webhook Handler
  */
 export async function POST(req: Request) {
   try {
+    // ── IP Whitelist Check ─────────────────────────────────────────────────
+    const headersList = await headers();
+    const clientIP = getClientIP(headersList);
+    const allowedIPs = getAllowedIPs();
+
+    if (!isIPAllowed(clientIP, allowedIPs)) {
+      console.warn(`🚫 Webhook blocked from unauthorized IP: ${clientIP}`);
+      return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
+
+    console.log(`✅ Webhook request accepted from IP: ${clientIP}`);
+    // ───────────────────────────────────────────────────────────────────────
+
     const body = await req.json();
     console.log("REDPAY WEBHOOK RECEIVED:", JSON.stringify(body, null, 2));
 
