@@ -11,9 +11,6 @@ const PAYMENT_METHODS = [
   { value: "va_bri", label: "BRI Virtual Account" },
   { value: "va_mandiri", label: "Mandiri Virtual Account" },
   { value: "va_bni", label: "BNI Virtual Account" },
-  { value: "va_permata", label: "Permata Virtual Account" },
-  { value: "va_sinarmas", label: "Sinarmas Virtual Account" },
-  { value: "gopay", label: "GoPay" },
   { value: "dana", label: "DANA" },
 ];
 

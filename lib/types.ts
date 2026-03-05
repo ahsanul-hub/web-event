@@ -17,6 +17,7 @@ export type Registration = {
   registration_code: string;
   status: RegistrationStatus;
   payment_link: string;
+  voucher_code: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -40,4 +41,18 @@ export type AdminUser = {
   email: string;
   password_hash: string;
   created_at: string;
+};
+
+export type Voucher = {
+  id: number;
+  code: string;
+  description: string;
+  discount_type: "percent" | "fixed";
+  discount_value: number;
+  max_claims: number;
+  current_claims: number;
+  is_active: boolean;
+  expires_at: string | null;
+  created_at: string;
+  claimants?: { nik: string; full_name: string }[];
 };

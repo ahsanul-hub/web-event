@@ -3,6 +3,7 @@ import { getAllRegistrations, getTransactions } from "@/lib/registrations";
 import AdminLogoutButton from "@/components/AdminLogoutButton";
 import AdminTable from "@/components/AdminTable";
 import WhitelistManager from "@/components/WhitelistManager";
+import VoucherManager from "@/components/VoucherManager";
 import { redirect } from "next/navigation";
 
 export default async function AdminPage() {
@@ -104,6 +105,7 @@ export default async function AdminPage() {
             />
 
             <WhitelistManager />
+            <VoucherManager />
           </section>
         </main>
       </div>

@@ -14,6 +14,7 @@ type Input = {
   attendanceType: string;
   tourIkn?: boolean;
   additionalInfo?: string;
+  voucherCode?: string | null;
 };
 
 export async function createRegistration(input: Input): Promise<Registration> {
@@ -24,8 +25,8 @@ export async function createRegistration(input: Input): Promise<Registration> {
 
   const result = await pool.query<Registration>(
     `INSERT INTO registrations
-      (nama_ktp, full_name, nik, email, phone, institution, kota_asal, profession, attendance_type, tour_ikn, additional_info, registration_code, payment_link)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+      (nama_ktp, full_name, nik, email, phone, institution, kota_asal, profession, attendance_type, tour_ikn, additional_info, registration_code, payment_link, voucher_code)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
      RETURNING *`,
     [
       input.namaKtp,
@@ -41,6 +42,7 @@ export async function createRegistration(input: Input): Promise<Registration> {
       input.additionalInfo ?? "",
       code,
       paymentLink,
+      input.voucherCode || null,
     ],
   );
 
@@ -201,6 +203,18 @@ export async function getTransactionByCode(
   );
   return result.rows[0] ?? null;
 }
+export async function getRegistrationByNIK(
+  nik: string,
+): Promise<Pick<Registration, "registration_code" | "email"> | null> {
+  const result = await pool.query<
+    Pick<Registration, "registration_code" | "email">
+  >(
+    "SELECT registration_code, email FROM registrations WHERE nik = $1 LIMIT 1",
+    [nik],
+  );
+  return result.rows[0] ?? null;
+}
+
 export async function isNIKWhitelisted(nik: string): Promise<boolean> {
   const result = await pool.query(
     "SELECT 1 FROM nik_whitelist WHERE nik = $1 LIMIT 1",

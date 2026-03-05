@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 type FormState = {
@@ -58,9 +58,6 @@ const PAYMENT_METHODS = [
   { value: "va_bri", label: "BRI Virtual Account" },
   { value: "va_mandiri", label: "Mandiri Virtual Account" },
   { value: "va_bni", label: "BNI Virtual Account" },
-  { value: "va_permata", label: "Permata Virtual Account" },
-  { value: "va_sinarmas", label: "Sinarmas Virtual Account" },
-  { value: "gopay", label: "GoPay" },
   { value: "dana", label: "DANA" },
 ];
 
@@ -68,7 +65,62 @@ export default function RegistrationForm() {
   const [form, setForm] = useState<FormState>(initialState);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [nikError, setNikError] = useState<{
+    maskedEmail: string;
+    registrationCode: string;
+  } | null>(null);
+  const [voucherInput, setVoucherInput] = useState("");
+  const [voucherInfo, setVoucherInfo] = useState<{
+    code: string;
+    discount_type: "percent" | "fixed";
+    discount_value: number;
+  } | null>(null);
+  const [voucherError, setVoucherError] = useState("");
+  const [hasActiveVouchers, setHasActiveVouchers] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    // Check if there are any active vouchers to determine if we should show the input
+    const checkVouchers = async () => {
+      try {
+        const res = await fetch("/api/vouchers/active");
+        if (res.ok) {
+          const data = await res.json();
+          setHasActiveVouchers(data.length > 0);
+        }
+      } catch (err) {
+        console.error("Error checking vouchers:", err);
+      }
+    };
+    checkVouchers();
+  }, []);
+
+  async function handleVoucherCheck() {
+    if (!voucherInput) {
+      setVoucherInfo(null);
+      setVoucherError("");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/vouchers/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: voucherInput }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        setVoucherInfo(data.voucher);
+        setVoucherError("");
+      } else {
+        setVoucherInfo(null);
+        setVoucherError(data.message || "Kode voucher tidak valid.");
+      }
+    } catch (err) {
+      setVoucherError("Gagal memvalidasi voucher.");
+    }
+  }
 
   function handleChange(
     e: React.ChangeEvent<
@@ -87,15 +139,29 @@ export default function RegistrationForm() {
     e.preventDefault();
     setLoading(true);
     setError("");
+    setNikError(null);
 
     try {
       const res = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          voucherCode: voucherInfo?.code || null,
+        }),
       });
 
       const data = await res.json();
+
+      if (res.status === 409 && data.errorCode === "NIK_EXISTS") {
+        setNikError({
+          maskedEmail: data.maskedEmail,
+          registrationCode: data.registrationCode,
+        });
+        setLoading(false);
+        return;
+      }
+
       if (!res.ok) {
         setError(data.message ?? "Gagal mendaftar");
         setLoading(false);
@@ -304,7 +370,57 @@ export default function RegistrationForm() {
           </p>
         </div>
 
-        {/* Tour IKN Checkbox */}
+        {/* Voucher Code */}
+        {hasActiveVouchers && (
+          <div className="form-group">
+            <label>Masukkan Voucher (Jika ada)</label>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <input
+                type="text"
+                placeholder="PROMO2024"
+                value={voucherInput}
+                onChange={(e) => setVoucherInput(e.target.value.toUpperCase())}
+                onBlur={handleVoucherCheck}
+                style={{ flex: 1 }}
+              />
+              <button
+                type="button"
+                onClick={handleVoucherCheck}
+                style={{
+                  padding: "0 15px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                  background: "#15803d",
+                  fontSize: "13px",
+                  cursor: "pointer",
+                }}>
+                Cek
+              </button>
+            </div>
+            {voucherError && (
+              <p
+                style={{ color: "#ef4444", fontSize: "12px", margin: "4px 0" }}>
+                {voucherError}
+              </p>
+            )}
+            {voucherInfo && (
+              <p
+                style={{
+                  color: "#15803d",
+                  fontSize: "12px",
+                  margin: "4px 0",
+                  fontWeight: "bold",
+                }}>
+                ✓ Voucher digunakan: Potongan{" "}
+                {voucherInfo.discount_type === "percent"
+                  ? `${voucherInfo.discount_value}%`
+                  : `Rp ${voucherInfo.discount_value.toLocaleString("id-ID")}`}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Informasi Tambahan */}
         {/* <label className="tour-checkbox-box" htmlFor="tourIkn">
           <input
             id="tourIkn"
@@ -339,7 +455,39 @@ export default function RegistrationForm() {
           />
         </div>
 
-        {/* Error message */}
+        {/* NIK duplicate error */}
+        {nikError && (
+          <div
+            style={{
+              background: "#fff7ed",
+              border: "1px solid #fed7aa",
+              borderRadius: 10,
+              padding: "14px 16px",
+              fontSize: 14,
+              color: "#9a3412",
+              lineHeight: 1.6,
+            }}>
+            <strong>⚠️ NIK sudah terdaftar.</strong>
+            <br />
+            NIK ini telah digunakan untuk mendaftar sebelumnya. Silakan cek
+            email pendaftaran di <strong>{nikError.maskedEmail}</strong> untuk
+            melanjutkan pembayaran.
+            <br />
+            <a
+              href={`/payment/${nikError.registrationCode}`}
+              style={{
+                display: "inline-block",
+                marginTop: 8,
+                color: "#c2410c",
+                fontWeight: 600,
+                textDecoration: "underline",
+              }}>
+              → Buka halaman pembayaran pendaftaran ini
+            </a>
+          </div>
+        )}
+
+        {/* Generic error message */}
         {error && <div className="form-error">⚠️ {error}</div>}
 
         {/* Submit */}

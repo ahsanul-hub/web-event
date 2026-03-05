@@ -224,6 +224,7 @@ export default function AdminTable({
                 "Jumlah",
                 "Status Bayar",
                 "Tgl. Bayar",
+                "Voucher",
                 "Aksi",
               ].map((h) => (
                 <th
@@ -377,6 +378,15 @@ export default function AdminTable({
                       hour: "2-digit",
                       minute: "2-digit",
                     })
+                  ) : (
+                    <span style={{ color: "#cbd5e1" }}>—</span>
+                  )}
+                </td>
+                <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+                  {row.voucher_code ? (
+                    <span style={{ fontWeight: 600, color: "#1d4ed8" }}>
+                      {row.voucher_code}
+                    </span>
                   ) : (
                     <span style={{ color: "#cbd5e1" }}>—</span>
                   )}
@@ -543,6 +553,27 @@ function AttendanceStatusSelect({
   );
 }
 
+// Generate HMAC-SHA256 signature of the payload using Web Crypto API
+async function signPayload(message: string): Promise<string> {
+  const secret = process.env.NEXT_PUBLIC_ADMIN_SIGN_SECRET ?? "";
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    encoder.encode(message),
+  );
+  return Array.from(new Uint8Array(signature))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 // Inline resend button to avoid another import
 function ResendButton({ code }: { code: string }) {
   const [loading, setLoading] = useState(false);
@@ -550,10 +581,15 @@ function ResendButton({ code }: { code: string }) {
 
   async function handleResend() {
     setLoading(true);
+    const body = JSON.stringify({ code });
+    const signature = await signPayload(body);
     await fetch("/api/admin/resend", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code }),
+      headers: {
+        "Content-Type": "application/json",
+        "X-Signature": signature,
+      },
+      body,
     });
     setLoading(false);
     setDone(true);

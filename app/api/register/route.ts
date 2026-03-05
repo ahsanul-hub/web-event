@@ -5,10 +5,12 @@ import {
   updatePaymentLink,
   upsertTransaction,
   isNIKWhitelisted,
+  getRegistrationByNIK,
 } from "@/lib/registrations";
 import { pool } from "@/lib/db";
 import { sendRegistrationEmail } from "@/lib/email";
 import { createRedpayOrder } from "@/lib/redpay";
+import { isVoucherValid, applyDiscount, claimVoucher } from "@/lib/vouchers";
 
 const bodySchema = z.object({
   namaKtp: z.string().min(3),
@@ -23,6 +25,7 @@ const bodySchema = z.object({
   paymentMethod: z.string().min(2),
   tourIkn: z.boolean().optional(),
   additionalInfo: z.string().optional(),
+  voucherCode: z.string().nullable().optional(),
 });
 
 const PRICING_MAP: Record<string, number> = {
@@ -37,17 +40,56 @@ export async function POST(req: Request) {
     const body = await req.json();
     const validated = bodySchema.parse(body);
 
+    // Check NIK uniqueness before creating anything
+    const existingByNIK = await getRegistrationByNIK(validated.nik);
+    if (existingByNIK) {
+      // Mask the email: show first 2 chars + domain only, e.g. jo***@gmail.com
+      const [localPart, domain] = existingByNIK.email.split("@");
+      const masked =
+        localPart.slice(0, 2).padEnd(localPart.length, "*") + "@" + domain;
+      return NextResponse.json(
+        {
+          errorCode: "NIK_EXISTS",
+          message: `NIK ini sudah terdaftar.`,
+          maskedEmail: masked,
+          registrationCode: existingByNIK.registration_code,
+        },
+        { status: 409 },
+      );
+    }
+
+    // Process Voucher if present
+    let appliedVoucher = null;
+    if (validated.voucherCode) {
+      const { valid, voucher, reason } = await isVoucherValid(
+        validated.voucherCode,
+      );
+      if (!valid) {
+        return NextResponse.json({ message: reason }, { status: 400 });
+      }
+      appliedVoucher = voucher;
+    }
+
     // Create initial registration record
-    const registration = await createRegistration(validated);
+    const registration = await createRegistration({
+      ...validated,
+      voucherCode: appliedVoucher?.code || null,
+    });
 
     // 1. Check for NIK Whitelist
     const isWhitelisted = await isNIKWhitelisted(validated.nik);
-    const amount = isWhitelisted
+    let amount = isWhitelisted
       ? 0
       : PRICING_MAP[validated.profession] || 250000;
 
-    if (isWhitelisted) {
-      // Direct Success for Whitelisted NIK
+    // Apply voucher discount if applicable and not whitelisted
+    if (appliedVoucher && amount > 0) {
+      amount = applyDiscount(amount, appliedVoucher);
+      await claimVoucher(appliedVoucher.code);
+    }
+
+    if (isWhitelisted || amount === 0) {
+      // Direct Success for Whitelisted NIK or 100% discount
       await pool.query(
         "UPDATE registrations SET status = 'paid', updated_at = NOW() WHERE registration_code = $1",
         [registration.registration_code],
@@ -62,12 +104,12 @@ export async function POST(req: Request) {
         payer_name: registration.full_name,
         payer_email: registration.email,
         amount: 0,
-        payment_method: "whitelist",
+        payment_method: isWhitelisted ? "whitelist" : "voucher",
         status: "success",
       });
 
       console.log(
-        `✨ Whitelisted NIK detected: ${validated.nik}. Registration ${registration.registration_code} marked as PAID.`,
+        `✨ ${isWhitelisted ? "Whitelisted NIK" : "100% Voucher"} detected. Registration ${registration.registration_code} marked as PAID.`,
       );
     } else {
       // standard Redpay flow
