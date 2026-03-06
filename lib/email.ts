@@ -3,6 +3,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { pool } from "./db";
 import type { Registration, Transaction } from "./types";
+import { getSetting } from "./settings";
 
 function getTransporter() {
   const host = process.env.SMTP_HOST;
@@ -181,6 +182,9 @@ export async function sendRegistrationEmail(registration: Registration) {
   const from = process.env.MAIL_FROM ?? "noreply@patklin-borneo.id";
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
+  const whatsappLink = await getSetting("whatsapp_link");
+  const onlineMeetingLink = await getSetting("online_meeting_link");
+
   const isPaid = registration.status === "paid";
   const statusLabel = isPaid ? "Lunas / Terverifikasi" : "Menunggu Pembayaran";
   const statusColor = isPaid ? "#10b981" : "#f59e0b";
@@ -228,7 +232,9 @@ export async function sendRegistrationEmail(registration: Registration) {
         .info-value { font-size: 14px; color: #0f2a83; font-weight: 700; }
         .status-badge { display: inline-block; padding: 4px 12px; border-radius: 99px; font-size: 12px; font-weight: 700; background-color: ${statusColor}20; color: ${statusColor}; border: 1px solid ${statusColor}40; }
         .cta-container { text-align: center; margin-top: 30px; }
-        .btn { display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #1a3b94, #0a1f66); color: #ffffff !important; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 15px; box-shadow: 0 4px 6px rgba(15,42,131,0.2); }
+        .btn { display: inline-block; padding: 14px 24px; background: linear-gradient(135deg, #1a3b94, #0a1f66); color: #ffffff !important; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 14px; box-shadow: 0 4px 6px rgba(15,42,131,0.2); margin: 5px; }
+        .btn-wa { background: linear-gradient(135deg, #25D366, #128C7E); box-shadow: 0 4px 6px rgba(37,211,102,0.2); }
+        .btn-zoom { background: linear-gradient(135deg, #2D8CFF, #0B5ED7); box-shadow: 0 4px 6px rgba(45,140,255,0.2); }
         .footer { padding: 30px 40px; background-color: #f8fafc; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
         .footer p { margin: 5px 0; }
         .event-details { margin-top: 15px; padding-top: 15px; border-top: 1px dotted #cbd5e1; }
@@ -276,8 +282,18 @@ export async function sendRegistrationEmail(registration: Registration) {
           ${
             isPaid
               ? `
-            <p style="font-size: 13px; color: #64748b; text-align: center; font-style: italic;">
+            <div class="cta-container">
+              ${whatsappLink ? `<a href="${whatsappLink}" class="btn btn-wa">Join WhatsApp Group</a>` : ""}
+              ${
+                registration.attendance_type.toLowerCase() === "online" &&
+                onlineMeetingLink
+                  ? `<a href="${onlineMeetingLink}" class="btn btn-zoom">Online Meeting Link</a>`
+                  : ""
+              }
+            </div>
+            <p style="font-size: 13px; color: #64748b; text-align: center; font-style: italic; margin-top: 15px;">
               *Kwitansi digital telah dilampirkan dalam email ini.
+              ${whatsappLink ? "<br/>Mohon segera bergabung ke grup WhatsApp di atas untuk informasi teknis lebih lanjut." : ""}
             </p>
           `
               : `

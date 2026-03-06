@@ -4,6 +4,7 @@ import AdminLogoutButton from "@/components/AdminLogoutButton";
 import AdminTable from "@/components/AdminTable";
 import WhitelistManager from "@/components/WhitelistManager";
 import VoucherManager from "@/components/VoucherManager";
+import LinkManager from "@/components/LinkManager";
 import { redirect } from "next/navigation";
 
 export default async function AdminPage() {
@@ -64,7 +65,7 @@ export default async function AdminPage() {
         <main>
           <section className="hero">
             <h1>Admin Registrasi &amp; Transaksi</h1>
-            <p>
+            <p style={{ marginBottom: "8px" }}>
               Daftar peserta, data transaksi, resend email, dan export laporan.
             </p>
             <AdminLogoutButton />
@@ -104,6 +105,7 @@ export default async function AdminPage() {
               transactions={transactions}
             />
 
+            <LinkManager />
             <WhitelistManager />
             <VoucherManager />
           </section>

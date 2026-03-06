@@ -37,8 +37,7 @@ export async function createRedpayOrder(
   paymentMethod: string = "qris",
   transactionId?: string,
 ): Promise<string> {
-  const REDPAY_API_URL =
-    process.env.REDPAY_API_URL || "https://sandbox-payment.redision.com";
+  const REDPAY_API_URL = process.env.REDPAY_API_URL;
   const REDPAY_APP_KEY = process.env.REDPAY_APP_KEY;
   const REDPAY_APP_ID = process.env.REDPAY_APP_ID;
   const REDPAY_APP_SECRET = process.env.REDPAY_APP_SECRET;
