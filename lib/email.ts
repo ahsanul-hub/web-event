@@ -314,10 +314,25 @@ export async function sendRegistrationEmail(registration: Registration) {
           </div>
         </div>
         <div class="footer">
+          <p style="margin-bottom: 15px; font-weight: 700; color: #64748b; font-size: 13px;">Untuk Informasi & Bantuan:</p>
+          <div style="display: table; width: 100%; margin-bottom: 20px; font-size: 12px; color: #94a3b8;">
+            <div style="display: table-row;">
+              <div style="display: table-cell; text-align: left; padding: 2px 0;">Ramlah</div>
+              <div style="display: table-cell; text-align: right; padding: 2px 0;">0821-5701-2190</div>
+            </div>
+            <div style="display: table-row;">
+              <div style="display: table-cell; text-align: left; padding: 2px 0;">Dr. Felisia, Sp. PK</div>
+              <div style="display: table-cell; text-align: right; padding: 2px 0;">0813-8117-6429</div>
+            </div>
+            <div style="display: table-row;">
+              <div style="display: table-cell; text-align: left; padding: 2px 0;">Dr. Ranisa, Sp. PK</div>
+              <div style="display: table-cell; text-align: right; padding: 2px 0;">0813-5032-1212</div>
+            </div>
+          </div>
           <p>Jika butuh bantuan, hubungi Panitia melalui dashboard pendaftaran.</p>
           <p><a href="${appUrl}/payment/${registration.registration_code}" style="color: #00c2e0; text-decoration: none;">Lihat Detail Pendaftaran &rarr;</a></p>
           <div style="margin-top: 20px; opacity: 0.5;">
-            &copy; 2025 PDS PATKLIN Regional Borneo. all rights reserved.
+            &copy; 2026 PDS PATKLIN Regional Borneo. all rights reserved.
           </div>
         </div>
       </div>

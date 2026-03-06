@@ -252,6 +252,41 @@ export default function HomePage() {
               registrasi ulang di lokasi (On-site).
             </li>
           </ol>
+          {/* Info Kontak */}
+          <div
+            style={{
+              marginTop: "20px",
+              padding: "15px",
+              backgroundColor: "rgba(15, 42, 131, 0.05)",
+              borderRadius: "8px",
+              fontSize: "12px",
+              color: "#475569",
+            }}>
+            <div
+              style={{
+                fontWeight: 800,
+                textTransform: "uppercase",
+                color: "#0f2a83",
+                marginBottom: "8px",
+                fontSize: "11px",
+                letterSpacing: "0.05em",
+              }}>
+              Informasi &amp; Bantuan:
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr auto",
+                gap: "4px",
+              }}>
+              <span>Ramlah</span>
+              <span style={{ fontWeight: 700 }}>0821-5701-2190</span>
+              <span>Dr. Felisia, Sp. PK</span>
+              <span style={{ fontWeight: 700 }}>0813-8117-6429</span>
+              <span>Dr. Ranisa, Sp. PK</span>
+              <span style={{ fontWeight: 700 }}>0813-5032-1212</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
