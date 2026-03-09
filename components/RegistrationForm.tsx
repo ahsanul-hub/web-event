@@ -49,7 +49,7 @@ const PRICING_MAP: Record<string, number> = {
 
 const ATTENDANCE_TYPES = [
   { value: "offline", label: "Luring (Offline)" },
-  { value: "online", label: "Daring (Online)" },
+  { value: "online", label: "Daring (Online) Khusus Domisili Luar Balikpapan" },
 ];
 
 const PAYMENT_METHODS = [
