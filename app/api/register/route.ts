@@ -152,11 +152,10 @@ export async function POST(req: Request) {
       }
     }
 
-    try {
-      await sendRegistrationEmail(registration);
-    } catch (emailError) {
+    // Eksekusi pengiriman email di background (tanpa await) agar response API tidak terblokir / menjadi lambat
+    sendRegistrationEmail(registration).catch((emailError) => {
       console.error("Email gagal dikirim:", emailError);
-    }
+    });
 
     return NextResponse.json({
       message: "Pendaftaran berhasil",
