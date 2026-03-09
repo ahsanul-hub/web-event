@@ -175,7 +175,10 @@ export default function RegistrationForm() {
     }
   }
 
-  const currentPrice = PRICING_MAP[form.profession] || 250000;
+  const currentPrice =
+    form.attendanceType === "online"
+      ? 50000
+      : PRICING_MAP[form.profession] || 250000;
 
   return (
     <form className="form-card" onSubmit={handleSubmit}>

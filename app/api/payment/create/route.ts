@@ -39,7 +39,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const amount = PRICING_MAP[registration.profession] || 250000;
+    const amount =
+      registration.attendance_type === "online"
+        ? 50000
+        : PRICING_MAP[registration.profession] || 250000;
 
     try {
       // Generate a unique transaction ID with a timestamp suffix to avoid

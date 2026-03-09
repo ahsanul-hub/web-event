@@ -80,7 +80,9 @@ export async function POST(req: Request) {
     const isWhitelisted = await isNIKWhitelisted(validated.nik);
     let amount = isWhitelisted
       ? 0
-      : PRICING_MAP[validated.profession] || 250000;
+      : validated.attendanceType === "online"
+        ? 50000
+        : PRICING_MAP[validated.profession] || 250000;
 
     // Apply voucher discount if applicable and not whitelisted
     if (appliedVoucher && amount > 0) {
