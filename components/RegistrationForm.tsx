@@ -442,7 +442,7 @@ export default function RegistrationForm() {
         </label> */}
 
         {/* Informasi Tambahan */}
-        <div className="form-group">
+        {/* <div className="form-group">
           <label>
             Informasi Tambahan/Pertanyaan
             <span className="optional">(Opsional)</span>
@@ -453,7 +453,7 @@ export default function RegistrationForm() {
             value={form.additionalInfo}
             onChange={handleChange}
           />
-        </div>
+        </div> */}
 
         {/* NIK duplicate error */}
         {nikError && (
