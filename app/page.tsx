@@ -223,7 +223,9 @@ export default function HomePage() {
               Kesempatan terbatas untuk mengikuti tour IKN Nusantara sehari
               sebelum acara simposium. Termasuk kunjungan ke kawasan IKN, makan
               siang, dan transportasi AC.{" "}
-              <strong>Centang opsi di form untuk ikut serta!</strong>
+              <strong style={{ fontSize: "14px", fontWeight: 600 }}>
+                Hubungi dr. Sherly, Sp.PK (WA : +62 852 98088989)
+              </strong>
             </p>
           </div>
         </div>
