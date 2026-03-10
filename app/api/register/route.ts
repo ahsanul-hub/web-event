@@ -113,24 +113,30 @@ export async function POST(req: Request) {
       console.log(
         `✨ ${isWhitelisted ? "Whitelisted NIK" : "100% Voucher"} detected. Registration ${registration.registration_code} marked as PAID.`,
       );
-    } else {
-      // standard Redpay flow
+
+      // Must wait for email so serverless doesn't terminate context
       try {
-        // Create order via Redpay API immediately
+        await sendRegistrationEmail(registration);
+      } catch (emailError) {
+        console.error("Email gagal dikirim:", emailError);
+      }
+    } else {
+      // standard Redpay flow (Pending)
+      // We can run Redpay creation and Email sending in parallel!
+      const redpayTask = async () => {
         const paymentUrl = await createRedpayOrder(
           {
             id: registration.id,
             full_name: registration.full_name,
             phone: registration.phone,
             registration_code: registration.registration_code,
-            category: registration.profession, // Map profession to category
+            category: registration.profession,
             nik: registration.nik,
           },
           amount,
           validated.paymentMethod,
         );
 
-        // Initialize transaction record as 'pending'
         await upsertTransaction({
           registration_id: registration.id,
           registration_code: registration.registration_code,
@@ -141,21 +147,28 @@ export async function POST(req: Request) {
           status: "pending",
         });
 
-        // Update registration with the actual Redpay link
         await updatePaymentLink(registration.registration_code, paymentUrl);
-
-        // Update registration object for email
         registration.payment_link = paymentUrl;
-      } catch (redpayError) {
-        console.error("Gagal membuat order Redpay otomatis:", redpayError);
-        // We still proceed even if Redpay fails, user can generate link manually later in detail page
+      };
+
+      const emailTask = sendRegistrationEmail(registration);
+
+      // Await both tasks concurrently. This ensures both finish before the API responds.
+      const [redpayResult, emailResult] = await Promise.allSettled([
+        redpayTask(),
+        emailTask,
+      ]);
+
+      if (redpayResult.status === "rejected") {
+        console.error(
+          "Gagal membuat order Redpay otomatis:",
+          redpayResult.reason,
+        );
+      }
+      if (emailResult.status === "rejected") {
+        console.error("Email gagal dikirim:", emailResult.reason);
       }
     }
-
-    // Eksekusi pengiriman email di background (tanpa await) agar response API tidak terblokir / menjadi lambat
-    sendRegistrationEmail(registration).catch((emailError) => {
-      console.error("Email gagal dikirim:", emailError);
-    });
 
     return NextResponse.json({
       message: "Pendaftaran berhasil",
