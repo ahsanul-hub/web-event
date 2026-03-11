@@ -642,16 +642,11 @@ function CancelButton({
   onSuccess: () => void;
 }) {
   const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [errorVisible, setErrorVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function handleCancel() {
-    if (
-      !confirm(
-        `Apakah Anda yakin ingin membatalkan pendaftaran ${name} (${code})? \n\nData tidak akan dihapus, namun NIK akan bisa digunakan untuk daftar ulang.`,
-      )
-    ) {
-      return;
-    }
-
     setLoading(true);
     try {
       const body = JSON.stringify({ code });
@@ -666,48 +661,260 @@ function CancelButton({
       });
 
       if (res.ok) {
+        setShowModal(false);
         onSuccess();
       } else {
         const data = await res.json();
-        alert(data.message || "Gagal membatalkan pendaftaran");
+        setErrorMessage(data.message || "Gagal membatalkan pendaftaran");
+        setErrorVisible(true);
       }
     } catch (e) {
       console.error(e);
-      alert("Terjadi kesalahan sistem");
+      setErrorMessage("Terjadi kesalahan sistem");
+      setErrorVisible(true);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <button
-      type="button"
-      onClick={handleCancel}
-      disabled={loading}
-      title="Batalkan Pendaftaran"
+    <>
+      <button
+        type="button"
+        onClick={() => setShowModal(true)}
+        disabled={loading}
+        title="Batalkan Pendaftaran"
+        style={{
+          padding: "4px 8px",
+          borderRadius: 6,
+          border: "1px solid #fee2e2",
+          background: "#fff",
+          color: "#ef4444",
+          cursor: loading ? "not-allowed" : "pointer",
+          fontSize: 12,
+          fontWeight: 600,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          transition: "all 0.2s",
+        }}
+        onMouseOver={(e) => {
+          e.currentTarget.style.background = "#ef4444";
+          e.currentTarget.style.color = "#fff";
+        }}
+        onMouseOut={(e) => {
+          e.currentTarget.style.background = "#fff";
+          e.currentTarget.style.color = "#ef4444";
+        }}>
+        {loading ? "..." : "Cancel"}
+      </button>
+
+      {showModal && (
+        <Modal
+          title="Konfirmasi Pembatalan"
+          onClose={() => !loading && setShowModal(false)}>
+          <div style={{ marginBottom: 20 }}>
+            <p
+              style={{ margin: "0 0 12px", color: "#475569", lineHeight: 1.6 }}>
+              Apakah Anda yakin ingin membatalkan pendaftaran:
+            </p>
+            <div
+              style={{
+                background: "#f8fafc",
+                padding: "12px",
+                borderRadius: 8,
+                border: "1px solid #e2e8f0",
+                marginBottom: 16,
+              }}>
+              <p
+                style={{
+                  margin: 0,
+                  fontWeight: 700,
+                  color: "#0f172a",
+                  wordBreak: "break-word",
+                }}>
+                {name}
+              </p>
+              <p
+                style={{
+                  margin: "4px 0 0",
+                  fontSize: 12,
+                  fontFamily: "monospace",
+                  color: "#64748b",
+                  wordBreak: "break-word",
+                }}>
+                {code}
+              </p>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                padding: "12px",
+                background: "#fef2f2",
+                borderRadius: 8,
+                border: "1px solid #fee2e2",
+              }}>
+              <span style={{ fontSize: 18, flexShrink: 0 }}>⚠️</span>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 12,
+                  color: "#991b1b",
+                  lineHeight: 1.5,
+                  flex: 1,
+                }}>
+                Data tidak akan dihapus dari sistem, namun status akan <br />
+                menjadi <strong>CANCELLED</strong> dan NIK pendaftar bisa
+                digunakan <br />
+                kembali untuk daftar ulang.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+            <button
+              onClick={() => setShowModal(false)}
+              disabled={loading}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 8,
+                border: "1px solid #e2e8f0",
+                background: "#fff",
+                color: "#64748b",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}>
+              Batal
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={loading}
+              style={{
+                padding: "8px 20px",
+                borderRadius: 8,
+                border: "none",
+                background: "#ef4444",
+                color: "#fff",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: loading ? "not-allowed" : "pointer",
+                boxShadow: "0 2px 4px rgba(239, 68, 68, 0.2)",
+              }}>
+              {loading ? "Memproses..." : "Ya, Batalkan"}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {errorVisible && (
+        <Modal title="Error" onClose={() => setErrorVisible(false)}>
+          <p style={{ color: "#ef4444", marginBottom: 20 }}>{errorMessage}</p>
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <button
+              onClick={() => setErrorVisible(false)}
+              style={{
+                padding: "8px 20px",
+                borderRadius: 8,
+                border: "none",
+                background: "#1e293b",
+                color: "#fff",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}>
+              Tutup
+            </button>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function Modal({
+  title,
+  children,
+  onClose,
+}: {
+  title: string;
+  children: React.ReactNode;
+  onClose: () => void;
+}) {
+  return (
+    <div
       style={{
-        padding: "4px 8px",
-        borderRadius: 6,
-        border: "1px solid #fee2e2",
-        background: "#fff",
-        color: "#ef4444",
-        cursor: loading ? "not-allowed" : "pointer",
-        fontSize: 12,
-        fontWeight: 600,
+        position: "fixed",
+        inset: 0,
+        zIndex: 1000,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        transition: "all 0.2s",
+        padding: "20px",
       }}
-      onMouseOver={(e) => {
-        e.currentTarget.style.background = "#ef4444";
-        e.currentTarget.style.color = "#fff";
-      }}
-      onMouseOut={(e) => {
-        e.currentTarget.style.background = "#fff";
-        e.currentTarget.style.color = "#ef4444";
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
       }}>
-      {loading ? "..." : "Cancel"}
-    </button>
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          background: "rgba(15, 23, 42, 0.6)",
+          backdropFilter: "blur(4px)",
+        }}
+      />
+      <div
+        style={{
+          position: "relative",
+          background: "#fff",
+          width: "100%",
+          maxWidth: "450px",
+          borderRadius: 16,
+          boxShadow:
+            "0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)",
+          overflow: "hidden",
+          animation: "modalFadeIn 0.2s ease-out",
+        }}>
+        <style>{`
+          @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.95) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+          }
+        `}</style>
+        <div
+          style={{
+            padding: "16px 20px",
+            borderBottom: "1px solid #f1f5f9",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}>
+          <h3
+            style={{
+              margin: 0,
+              fontSize: 18,
+              fontWeight: 700,
+              color: "#0f172a",
+            }}>
+            {title}
+          </h3>
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              fontSize: 24,
+              color: "#94a3b8",
+              cursor: "pointer",
+              lineHeight: 1,
+              padding: 0,
+            }}>
+            &times;
+          </button>
+        </div>
+        <div style={{ padding: "20px" }}>{children}</div>
+      </div>
+    </div>
   );
 }
