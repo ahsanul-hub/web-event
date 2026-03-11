@@ -71,9 +71,49 @@ export async function getRegistrationByCode(
 
 export async function getAllRegistrations(): Promise<Registration[]> {
   const result = await pool.query<Registration>(
-    "SELECT * FROM registrations ORDER BY created_at DESC",
+    "SELECT * FROM registrations WHERE status != 'cancelled' ORDER BY created_at DESC",
   );
   return result.rows;
+}
+
+export async function cancelRegistration(
+  code: string,
+): Promise<Registration | null> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Suffixing email and registration_code to avoid UNIQUE constraint collisions
+    // and suffixing nik to allow re-registration with the same NIK.
+    const result = await client.query<Registration>(
+      `UPDATE registrations
+       SET status = 'cancelled',
+           email = email || '.cancelled.' || TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'),
+           registration_code = registration_code || '.cancelled.' || TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'),
+           nik = nik || '.cancelled.' || TO_CHAR(NOW(), 'YYYYMMDDHH24MISS'),
+           updated_at = NOW()
+       WHERE registration_code = $1
+       RETURNING *`,
+      [code],
+    );
+
+    const registration = result.rows[0] ?? null;
+
+    if (registration && registration.voucher_code) {
+      await client.query(
+        `UPDATE vouchers SET current_claims = GREATEST(0, current_claims - 1) WHERE code = $1`,
+        [registration.voucher_code.toUpperCase()],
+      );
+    }
+
+    await client.query("COMMIT");
+    return registration;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export async function upsertTransaction(data: {
@@ -175,7 +215,10 @@ export async function getAdminByEmail(
 
 export async function getTransactions(): Promise<Transaction[]> {
   const result = await pool.query<Transaction>(
-    "SELECT * FROM transactions ORDER BY paid_at DESC, id DESC",
+    `SELECT t.* FROM transactions t
+     JOIN registrations r ON t.registration_id = r.id
+     WHERE r.status != 'cancelled'
+     ORDER BY t.paid_at DESC, t.id DESC`,
   );
   return result.rows;
 }
@@ -209,7 +252,7 @@ export async function getRegistrationByNIK(
   const result = await pool.query<
     Pick<Registration, "registration_code" | "email">
   >(
-    "SELECT registration_code, email FROM registrations WHERE nik = $1 LIMIT 1",
+    "SELECT registration_code, email FROM registrations WHERE nik = $1 AND status != 'cancelled' LIMIT 1",
     [nik],
   );
   return result.rows[0] ?? null;

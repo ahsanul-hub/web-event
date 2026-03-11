@@ -13,9 +13,10 @@ export async function getAllVouchers(): Promise<Voucher[]> {
     const claimantsResult = await pool.query<{
       nik: string;
       full_name: string;
-    }>("SELECT nik, full_name FROM registrations WHERE voucher_code = $1", [
-      voucher.code,
-    ]);
+    }>(
+      "SELECT nik, full_name FROM registrations WHERE voucher_code = $1 AND status != 'cancelled'",
+      [voucher.code],
+    );
     voucher.claimants = claimantsResult.rows;
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import type { Registration, Transaction } from "@/lib/types";
 
 type Row = Registration & {
@@ -41,6 +42,7 @@ export default function AdminTable({
     "all" | "paid" | "pending_payment"
   >("all");
   const [page, setPage] = useState(1);
+  const router = useRouter();
 
   // Build a lookup: registration_code → transaction
   const txMap = useMemo(() => {
@@ -397,7 +399,15 @@ export default function AdminTable({
                   )}
                 </td>
                 <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
-                  <ResendButton code={row.registration_code} />
+                  <div
+                    style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <ResendButton code={row.registration_code} />
+                    <CancelButton
+                      code={row.registration_code}
+                      name={row.full_name}
+                      onSuccess={() => router.refresh()}
+                    />
+                  </div>
                 </td>
               </tr>
             ))}
@@ -618,6 +628,86 @@ function ResendButton({ code }: { code: string }) {
         whiteSpace: "nowrap",
       }}>
       {done ? "Terkirim" : loading ? "..." : "Resend Email"}
+    </button>
+  );
+}
+
+function CancelButton({
+  code,
+  name,
+  onSuccess,
+}: {
+  code: string;
+  name: string;
+  onSuccess: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  async function handleCancel() {
+    if (
+      !confirm(
+        `Apakah Anda yakin ingin membatalkan pendaftaran ${name} (${code})? \n\nData tidak akan dihapus, namun NIK akan bisa digunakan untuk daftar ulang.`,
+      )
+    ) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const body = JSON.stringify({ code });
+      const signature = await signPayload(body);
+      const res = await fetch("/api/admin/cancel", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Signature": signature,
+        },
+        body,
+      });
+
+      if (res.ok) {
+        onSuccess();
+      } else {
+        const data = await res.json();
+        alert(data.message || "Gagal membatalkan pendaftaran");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Terjadi kesalahan sistem");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCancel}
+      disabled={loading}
+      title="Batalkan Pendaftaran"
+      style={{
+        padding: "4px 8px",
+        borderRadius: 6,
+        border: "1px solid #fee2e2",
+        background: "#fff",
+        color: "#ef4444",
+        cursor: loading ? "not-allowed" : "pointer",
+        fontSize: 12,
+        fontWeight: 600,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        transition: "all 0.2s",
+      }}
+      onMouseOver={(e) => {
+        e.currentTarget.style.background = "#ef4444";
+        e.currentTarget.style.color = "#fff";
+      }}
+      onMouseOut={(e) => {
+        e.currentTarget.style.background = "#fff";
+        e.currentTarget.style.color = "#ef4444";
+      }}>
+      {loading ? "..." : "Cancel"}
     </button>
   );
 }
