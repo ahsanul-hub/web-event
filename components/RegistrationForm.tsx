@@ -284,7 +284,11 @@ export default function RegistrationForm() {
           />
           <p className="form-hint">
             Mohon cantumkan sesuai email LMS. E-mail ini akan digunakan untuk
-            menerima konfirmasi pendaftaran
+            menerima konfirmasi pendaftaran dan kuitansi pembayaran
+          </p>
+          <p className="form-hint">
+            Email ini akan digunakan untuk menerima link zoom (bagi peserta
+            online)
           </p>
           <p className="form-hint"></p>
         </div>
