@@ -283,10 +283,6 @@ export default function HomePage() {
               }}>
               <span>Ramlah</span>
               <span style={{ fontWeight: 700 }}>0821-5701-2190</span>
-              <span>Dr. Felisia, Sp. PK</span>
-              <span style={{ fontWeight: 700 }}>0813-8117-6429</span>
-              <span>Dr. Ranisa, Sp. PK</span>
-              <span style={{ fontWeight: 700 }}>0813-5032-1212</span>
             </div>
           </div>
         </div>
