@@ -282,6 +282,11 @@ export default function RegistrationForm() {
             value={form.email}
             onChange={handleChange}
           />
+          <p className="form-hint">
+            Mohon cantumkan sesuai email LMS. E-mail ini akan digunakan untuk
+            menerima konfirmasi pendaftaran
+          </p>
+          <p className="form-hint"></p>
         </div>
 
         {/* WhatsApp */}
