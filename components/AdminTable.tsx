@@ -79,6 +79,7 @@ export default function AdminTable({
       result = result.filter(
         (r) =>
           r.full_name?.toLowerCase().includes(q) ||
+          r.nik?.toLowerCase().includes(q) ||
           r.registration_code?.toLowerCase().includes(q) ||
           r.email?.toLowerCase().includes(q) ||
           r.institution?.toLowerCase().includes(q) ||
@@ -163,7 +164,7 @@ export default function AdminTable({
         }}>
         <input
           type="text"
-          placeholder="Cari nama, kode registrasi, atau email..."
+          placeholder="Cari nama, NIK, kode registrasi, atau email..."
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -216,6 +217,7 @@ export default function AdminTable({
                 "#",
                 "Kode Registrasi",
                 "Nama",
+                "NIK",
                 "Email",
                 "Profesi",
                 "Kehadiran",
@@ -297,6 +299,9 @@ export default function AdminTable({
                     fontWeight: 500,
                   }}>
                   {row.full_name}
+                </td>
+                <td style={{ padding: "10px 12px", color: "#475569" }}>
+                  {row.nik}
                 </td>
                 <td style={{ padding: "10px 12px", color: "#475569" }}>
                   {row.email}

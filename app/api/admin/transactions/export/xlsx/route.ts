@@ -26,6 +26,7 @@ export async function GET() {
       "Kode Registrasi": reg.registration_code,
       "Nama KTP": reg.nama_ktp,
       "Nama Lengkap & Gelar": reg.full_name,
+      NIK: reg.nik,
       Email: reg.email,
       Telepon: reg.phone,
       Institusi: reg.institution,
