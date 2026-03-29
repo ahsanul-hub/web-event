@@ -23,28 +23,27 @@ export async function POST(req: Request) {
     }
 
     // --- BAGIAN MENGAMBIL DATA EMAIL SELURUH PESERTA ONLINE (DI-COMMENT) ---
-    /*
+
     const result = await pool.query<Registration>(
       `SELECT * FROM registrations 
        WHERE attendance_type = 'online' 
-         AND status = 'paid'`
+         AND status = 'paid'`,
     );
     const onlineParticipants = result.rows;
-    */
 
     // --- LIST EMAIL DUMMY UNTUK TEST KIRIM ---
-    const onlineParticipants = [
-      {
-        full_name: "Ahsanul Waladi",
-        email: "aldi.madridista.am@gmail.com",
-        registration_code: "DUMMY001",
-      },
-      {
-        full_name: "John",
-        email: "john.jojon888@gmail.com",
-        registration_code: "DUMMY002",
-      },
-    ] as Registration[];
+    // const onlineParticipants = [
+    //   {
+    //     full_name: "Ahsanul Waladi",
+    //     email: "aldi.madridista.am@gmail.com",
+    //     registration_code: "DUMMY001",
+    //   },
+    //   {
+    //     full_name: "John",
+    //     email: "john.jojon888@gmail.com",
+    //     registration_code: "DUMMY002",
+    //   },
+    // ] as Registration[];
 
     let sentCount = 0;
     for (const participant of onlineParticipants) {
