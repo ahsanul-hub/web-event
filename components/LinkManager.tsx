@@ -141,9 +141,16 @@ export default function LinkManager() {
         <div
           style={{
             display: "flex",
-            justifyContent: "flex-end",
-            marginTop: "5px",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginTop: "15px",
+            borderTop: "1px solid #e2e8f0",
+            paddingTop: "20px",
+            gap: "10px",
+            flexWrap: "wrap"
           }}>
+          <SendMeetingLinkButton />
+          
           <button
             type="submit"
             disabled={loading}
@@ -183,6 +190,70 @@ export default function LinkManager() {
           </p>
         )}
       </form>
+    </div>
+  );
+}
+
+// Button to send meeting links to all online participants
+function SendMeetingLinkButton() {
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  async function handleSend() {
+    if (!confirm("Kirim email link meeting ke seluruh peserta online?")) return;
+
+    setLoading(true);
+    setMessage("");
+    try {
+      const res = await fetch("/api/admin/send-meeting-links", {
+        method: "POST",
+      });
+      const data = await res.json();
+      setMessage(
+        data.message || (res.ok ? "Berhasil dikirim" : "Gagal dikirim"),
+      );
+    } catch (e) {
+      console.error(e);
+      setMessage("Terjadi kesalahan sistem");
+    } finally {
+      setLoading(false);
+      setTimeout(() => setMessage(""), 5000);
+    }
+  }
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      {message && (
+        <span
+          style={{
+            fontSize: 13,
+            color:
+              message.includes("Gagal") || message.includes("kesalahan")
+                ? "#ef4444"
+                : "#10b981",
+            fontWeight: 600,
+          }}>
+          {message}
+        </span>
+      )}
+      <button
+        type="button"
+        onClick={handleSend}
+        disabled={loading}
+        style={{
+          padding: "10px 16px",
+          borderRadius: "8px",
+          background: "linear-gradient(135deg, #1d4ed8, #1e3a8a)",
+          color: "#fff",
+          border: "none",
+          fontWeight: "bold",
+          fontSize: 13,
+          cursor: loading ? "not-allowed" : "pointer",
+          opacity: loading ? 0.7 : 1,
+          boxShadow: "0 4px 6px rgba(29, 78, 216, 0.2)",
+        }}>
+        {loading ? "Mengirim..." : "Kirim Email Link Meeting (Online)"}
+      </button>
     </div>
   );
 }

@@ -343,3 +343,95 @@ export async function sendRegistrationEmail(registration: Registration) {
     attachments,
   });
 }
+
+export async function sendMeetingEmail(
+  registration: Registration,
+  onlineMeetingLink: string,
+  whatsappLink: string
+) {
+  const transporter = getTransporter();
+  const from = process.env.MAIL_FROM ?? "noreply@patklin-borneo.id";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: 'Inter', Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f6fa; color: #172554; }
+        .container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .header { background-color: #0f2a83; padding: 30px 40px; text-align: center; }
+        .header h1 { color: #ffffff; font-size: 20px; font-weight: 800; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
+        .hero { background-color: #87d300; padding: 15px; text-align: center; color: #0f2a83; font-weight: 700; font-size: 14px; }
+        .content { padding: 40px; }
+        .greeting { font-size: 18px; font-weight: 700; margin: 0 0 10px; color: #0f2a83; }
+        .message { font-size: 15px; line-height: 1.6; color: #334155; margin-bottom: 25px; }
+        .cta-container { text-align: center; margin-top: 30px; }
+        .btn { display: inline-block; padding: 14px 24px; background: linear-gradient(135deg, #1a3b94, #0a1f66); color: #ffffff !important; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 14px; box-shadow: 0 4px 6px rgba(15,42,131,0.2); margin: 5px; }
+        .btn-wa { background: linear-gradient(135deg, #25D366, #128C7E); box-shadow: 0 4px 6px rgba(37,211,102,0.2); }
+        .btn-zoom { background: linear-gradient(135deg, #2D8CFF, #0B5ED7); box-shadow: 0 4px 6px rgba(45,140,255,0.2); }
+        .footer { padding: 30px 40px; background-color: #f8fafc; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+        .event-details { margin-top: 15px; padding-top: 15px; border-top: 1px dotted #cbd5e1; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>PDS PATKLIN <span style="color: #87d300;">BORNEO</span></h1>
+        </div>
+        <div class="hero">
+          Link Meeting Online - Simposium Ilmiah & Pelantikan
+        </div>
+        <div class="content">
+          <h2 class="greeting">Halo, ${registration.full_name}</h2>
+          <p class="message">
+            Terima kasih telah mendaftar sebagai peserta ONLINE pada acara Simposium Ilmiah & Pelantikan Pengurus PDS PATKLIN Regional Borneo 2025-2028.
+            Berikut adalah link meeting online untuk mengikuti acara:
+          </p>
+          
+          <div class="cta-container">
+            ${
+              onlineMeetingLink
+                ? `
+                  <div style="margin-bottom: 20px;">
+                    <a href="${onlineMeetingLink}" class="btn btn-zoom" style="margin-bottom: 10px; display: inline-block;">Join Online Meeting</a>
+                    <p style="font-size: 13px; color: #64748b; margin: 0; word-break: break-all;">
+                      Atau gunakan link ini: <br/>
+                      <a href="${onlineMeetingLink}" style="color: #00c2e0; text-decoration: none;">${onlineMeetingLink}</a>
+                    </p>
+                  </div>
+                  `
+                : ""
+            }
+            ${
+              whatsappLink
+                ? `<a href="${whatsappLink}" class="btn btn-wa">Join WhatsApp Group</a>`
+                : ""
+            }
+          </div>
+          
+          <div class="event-details">
+            <p style="font-size: 14px; font-weight: 700; color: #0f2a83; margin: 0 0 5px;">📍 Jadwal Acara</p>
+            <p style="font-size: 13px; margin: 0; color: #475569;">Sabtu, 11 April 2026</p>
+            <p style="font-size: 13px; margin: 0; color: #475569;">Dimohon untuk hadir tepat waktu.</p>
+          </div>
+        </div>
+        <div class="footer">
+          <p>Jika butuh bantuan, hubungi Panitia melalui <a href="${appUrl}/payment/${registration.registration_code}" style="color: #00c2e0; text-decoration: none;">dashboard pendaftaran.</a></p>
+          <div style="margin-top: 20px; opacity: 0.5;">
+            &copy; 2026 PDS PATKLIN Regional Borneo. all rights reserved.
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  await transporter.sendMail({
+    from,
+    to: registration.email,
+    subject: `[LINK MEETING] Simposium Ilmiah PDS PATKLIN Regional Borneo 2026`,
+    html,
+  });
+}
