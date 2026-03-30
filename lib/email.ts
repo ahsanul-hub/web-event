@@ -408,7 +408,7 @@ export async function sendMeetingEmail(
           </div>
 
           <p class="message">
-            Sehubungan dengan hal tersebut, berikut kami sampaikan tautan (link) Zoom yang dapat digunakan untuk mengikuti kegiatan webinar:
+            Bagi peserta yang mengikuti secara online, berikut kami sampaikan tautan (link) Zoom yang dapat digunakan untuk mengikuti kegiatan webinar:
           </p>
 
           <div class="cta-container">
