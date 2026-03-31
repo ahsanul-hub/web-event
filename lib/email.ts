@@ -423,12 +423,12 @@ export async function sendMeetingEmail(
           </div>
 
           <div class="timeline-box">
-            <div class="timeline-title">⚠️ MOHON DIPERHATIKAN TIMELINE PLATARAN SEHAT:</div>
+            <div class="timeline-title">⚠️ MOHON DIPERHATIKAN TIMELINE PLATARAN SEHAT BERIKUT:</div>
             <table style="width: 100%; font-size: 13px; color: #9a3412;">
-              <tr><td style="padding: 2px 0;"><b>Pre Test:</b> Mulai Sabtu, 11 April 2026 08:00 - 09.00</td></tr>
-              <tr><td style="padding: 2px 0;"><b>Post Test:</b> Minggu, 12 April 2026 17.00 - 18.00</td></tr>
-              <tr><td style="padding: 2px 0;"><b>Mulai Pembelajaran:</b> 11 April 2026, 08:00</td></tr>
-              <tr><td style="padding: 2px 0;"><b>Selesai Pembelajaran:</b> 12 April 2026, 18.00</td></tr>
+              <tr><td style="padding: 2px 0;"><b>Pre Test:</b> Sabtu, 11 April 2026 07:00 - 09.00 WITA</td></tr>
+              <tr><td style="padding: 2px 0;"><b>Post Test:</b> Minggu, 12 April 2026 17.00 - 18.00 WITA</td></tr>
+              <tr><td style="padding: 2px 0;"><b>Mulai Pembelajaran:</b> 11 April 2026, 07:00 WITA</td></tr>
+              <tr><td style="padding: 2px 0;"><b>Selesai Pembelajaran:</b> 12 April 2026, 18.00 WITA</td></tr>
             </table>
           </div>
 
