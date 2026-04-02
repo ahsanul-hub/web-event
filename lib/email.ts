@@ -4,6 +4,8 @@ import autoTable from "jspdf-autotable";
 import { pool } from "./db";
 import type { Registration, Transaction } from "./types";
 import { getSetting } from "./settings";
+import path from "path";
+import fs from "fs";
 
 function getTransporter() {
   const host = process.env.SMTP_HOST;
@@ -452,10 +454,25 @@ export async function sendMeetingEmail(
     </html>
   `;
 
+  const reportDir = path.join(process.cwd(), "public", "pdf", "report");
+  const attachments = [];
+
+  if (fs.existsSync(reportDir)) {
+    const files = fs.readdirSync(reportDir);
+    if (files.length > 0) {
+      const filename = files[0];
+      attachments.push({
+        filename: filename,
+        path: path.join(reportDir, filename),
+      });
+    }
+  }
+
   await transporter.sendMail({
     from,
     to: registration.email,
     subject: `[LINK MEETING] Simposium Ilmiah PDS PATKLIN Regional Borneo 2026`,
     html,
+    attachments,
   });
 }

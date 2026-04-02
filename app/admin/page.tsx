@@ -5,6 +5,7 @@ import AdminTable from "@/components/AdminTable";
 import WhitelistManager from "@/components/WhitelistManager";
 import VoucherManager from "@/components/VoucherManager";
 import LinkManager from "@/components/LinkManager";
+import MeetingReportManager from "@/components/MeetingReportManager";
 import { redirect } from "next/navigation";
 
 export default async function AdminPage() {
@@ -106,6 +107,7 @@ export default async function AdminPage() {
             />
 
             <LinkManager />
+            <MeetingReportManager />
             <WhitelistManager />
             <VoucherManager />
           </section>
