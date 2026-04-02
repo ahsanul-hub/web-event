@@ -4,8 +4,6 @@ import autoTable from "jspdf-autotable";
 import { pool } from "./db";
 import type { Registration, Transaction } from "./types";
 import { getSetting } from "./settings";
-import path from "path";
-import fs from "fs";
 
 function getTransporter() {
   const host = process.env.SMTP_HOST;
@@ -454,17 +452,20 @@ export async function sendMeetingEmail(
     </html>
   `;
 
-  const reportDir = path.join(process.cwd(), "public", "pdf", "report");
   const attachments = [];
 
-  if (fs.existsSync(reportDir)) {
-    const files = fs.readdirSync(reportDir);
-    if (files.length > 0) {
-      const filename = files[0];
-      attachments.push({
-        filename: filename,
-        path: path.join(reportDir, filename),
-      });
+  const pdfDataJson = await getSetting("meeting_report_pdf_data");
+  if (pdfDataJson) {
+    try {
+      const data = JSON.parse(pdfDataJson);
+      if (data.content && data.filename) {
+        attachments.push({
+          filename: data.filename,
+          content: Buffer.from(data.content, "base64"),
+        });
+      }
+    } catch (e) {
+      console.error("Gagal memproses lampiran PDF dari settings:", e);
     }
   }
 

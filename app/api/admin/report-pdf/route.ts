@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { getLoggedInAdminId } from "@/lib/auth";
-import fs from "fs";
-import path from "path";
-
-const REPORT_DIR = path.join(process.cwd(), "public", "pdf", "report");
+import { getSetting, upsertSetting } from "@/lib/settings";
+import { pool } from "@/lib/db";
 
 export async function GET() {
   try {
@@ -12,24 +10,17 @@ export async function GET() {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    if (!fs.existsSync(REPORT_DIR)) {
+    const dataJson = await getSetting("meeting_report_pdf_data");
+    if (!dataJson) {
       return NextResponse.json({ exists: false });
     }
 
-    const files = fs.readdirSync(REPORT_DIR);
-    if (files.length === 0) {
-      return NextResponse.json({ exists: false });
-    }
-
-    const filename = files[0];
-    const fullPath = path.join(REPORT_DIR, filename);
-    const stats = fs.statSync(fullPath);
-
+    const data = JSON.parse(dataJson);
     return NextResponse.json({
       exists: true,
-      filename: filename,
-      size: stats.size,
-      updatedAt: stats.mtime,
+      filename: data.filename,
+      size: data.size,
+      updatedAt: data.updatedAt,
     });
   } catch (error) {
     console.error(error);
@@ -56,20 +47,16 @@ export async function POST(req: Request) {
     }
 
     const bytes = await file.arrayBuffer();
-    const buffer = new Uint8Array(bytes);
+    const base64 = Buffer.from(bytes).toString("base64");
 
-    if (!fs.existsSync(REPORT_DIR)) {
-      fs.mkdirSync(REPORT_DIR, { recursive: true });
-    } else {
-      // Clear previous files to avoid storage bloat
-      const files = fs.readdirSync(REPORT_DIR);
-      for (const f of files) {
-        fs.unlinkSync(path.join(REPORT_DIR, f));
-      }
-    }
+    const data = {
+      filename: file.name,
+      size: file.size,
+      updatedAt: new Date().toISOString(),
+      content: base64,
+    };
 
-    const fullPath = path.join(REPORT_DIR, file.name);
-    fs.writeFileSync(fullPath, buffer);
+    await upsertSetting("meeting_report_pdf_data", JSON.stringify(data));
 
     return NextResponse.json({ message: "File uploaded successfully" });
   } catch (error) {
@@ -85,12 +72,8 @@ export async function DELETE() {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    if (fs.existsSync(REPORT_DIR)) {
-      const files = fs.readdirSync(REPORT_DIR);
-      for (const f of files) {
-        fs.unlinkSync(path.join(REPORT_DIR, f));
-      }
-    }
+    // Delete the setting row to free up space
+    await pool.query("DELETE FROM settings WHERE key = $1", ["meeting_report_pdf_data"]);
 
     return NextResponse.json({ message: "File deleted successfully" });
   } catch (error) {
