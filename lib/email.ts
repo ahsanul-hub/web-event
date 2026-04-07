@@ -477,3 +477,134 @@ export async function sendMeetingEmail(
     attachments,
   });
 }
+
+export async function sendReminderEmail(registration: Registration) {
+  const transporter = getTransporter();
+  const from = process.env.MAIL_FROM ?? "noreply@patklin-borneo.id";
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: 'Inter', Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f6fa; color: #172554; }
+        .container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .header { background-color: #0f2a83; padding: 30px 40px; text-align: center; }
+        .header h1 { color: #ffffff; font-size: 20px; font-weight: 800; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
+        .hero { background-color: #87d300; padding: 15px; text-align: center; color: #0f2a83; font-weight: 700; font-size: 14px; }
+        .content { padding: 30px 40px; }
+        .greeting { font-size: 16px; font-weight: 700; margin: 0 0 15px; color: #0f2a83; }
+        .message { font-size: 14px; line-height: 1.6; color: #334155; margin-bottom: 20px; text-align: justify; }
+        .details-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 25px; font-size: 14px; }
+        .timeline-box { background-color: #fff7ed; border: 1px solid #ffedd5; border-radius: 12px; padding: 20px; margin-bottom: 25px; font-size: 13px; color: #9a3412; }
+        .timeline-title { font-weight: 800; margin-bottom: 10px; color: #c2410c; text-transform: uppercase; }
+        .cta-container { margin: 25px 0; }
+        .btn { display: block; padding: 14px 10px; background: linear-gradient(135deg, #1a3b94, #0a1f66); color: #ffffff !important; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 13px; box-shadow: 0 4px 6px rgba(15,42,131,0.2); text-align: center; }
+        .btn-wa { background: linear-gradient(135deg, #25D366, #128C7E); box-shadow: 0 4px 6px rgba(37,211,102,0.2); }
+        .footer { padding: 30px 40px; background-color: #f8fafc; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+        .bullet-list { margin: 10px 0; padding-left: 20px; }
+        .bullet-list li { margin-bottom: 8px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>PDS PATKLIN <span style="color: #87d300;">BORNEO</span></h1>
+        </div>
+        <div class="hero">
+          REMINDER KEGIATAN & INFORMASI PENTING
+        </div>
+        <div class="content">
+          <p class="greeting">Bapak/Ibu Prof / Dr / dr <b>${registration.full_name}</b> yang kami hormati, </p>
+          
+          <p class="message">
+            Dalam rangka Pelantikan Pengurus PDS PATKLIN Regional Borneo (Balikpapan, Palangkaraya, Banjarmasin, Pontianak, dan Tarakan) Masa Bakti 2025–2028, kami mengucapkan terima kasih atas partisipasi Bapak/Ibu/ Saudara yang telah mendaftar sebagai peserta dalam kegiatan webinar <b>"Clinical Laboratory Perspective in Hematology and Endocrine Disease"</b> yang akan diselenggarakan pada:
+          </p>
+          
+          <div class="details-box">
+            <table style="width: 100%; border-collapse: collapse;">
+              <tr>
+                <td style="padding: 4px 0; width: 110px; color: #64748b; font-weight: 600;">Hari/Tanggal</td>
+                <td style="padding: 4px 0; color: #0f2a83; font-weight: 700;">: Sabtu, 11 April 2026</td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 0; color: #64748b; font-weight: 600;">Waktu</td>
+                <td style="padding: 4px 0; color: #0f2a83; font-weight: 700;">: 09.30 - 16.00 WITA</td>
+              </tr>
+              <tr>
+                <td style="padding: 4px 0; color: #64748b; font-weight: 600;">Tempat</td>
+                <td style="padding: 4px 0; color: #0f2a83; font-weight: 700;">: Platinum Hotel & Convention Center, Rhodium 2-7, M Floor</td>
+              </tr>
+            </table>
+          </div>
+
+          <p class="message">
+            <b>Bagi peserta offline</b>, registrasi akan dibuka pukul 09.00 WITA.<br/>
+            <b>Bagi peserta online</b>, tautan (link) Zoom akan diberitahukan via email pada H-1 dan juga akan dibagikan melalui grup WhatsApp.
+          </p>
+
+          <div class="timeline-box">
+            <div class="timeline-title">⚠️ TIMELINE PLATARAN SEHAT:</div>
+            <ul class="bullet-list">
+              <li>Peserta tidak perlu minta akses, tunggu dan cek berkala sampai dengan diverifikasi. Selama data NIK & email yang didaftarkan sudah benar, <b>PASTI</b> akan diverifikasi.</li>
+              <li><b>Pre Test:</b> Sabtu, 11 April 2026 (07:00 - 18.00 WITA)</li>
+              <li><b>Post Test:</b> Minggu, 12 April 2026 (17.00 WITA) s.d Rabu, 15 April 2026 (18.00 WITA)</li>
+            </ul>
+          </div>
+
+          <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: separate; border-spacing: 12px 0; margin: 25px 0;">
+            <tr>
+              <td style="width: 50%; vertical-align: middle;">
+                <a href="https://chat.whatsapp.com/Fl04qFt3ZOdDDKu4wEtNqr?mode=gi_t" class="btn btn-wa">Gabung Grup WhatsApp</a>
+              </td>
+              <td style="width: 50%; vertical-align: middle;">
+                <a href="https://drive.google.com/drive/folders/1VSwVDpJ2NfQhA3hsQNmaGEsmztndwifR" class="btn">Link Materi (Drive)</a>
+              </td>
+            </tr>
+          </table>
+
+          <p class="message">
+            Kami mengharapkan kehadiran Bapak/Ibu/ Saudara hadir tepat waktu agar dapat mengikuti seluruh rangkaian acara dengan baik. Atas perhatian dan partisipasinya, kami ucapkan terima kasih.
+          </p>
+          
+          <p class="message" style="margin-top: 30px;">
+            Hormat kami,<br/>
+            <b>Panitia PDS PATKLIN Regional Borneo</b>
+          </p>
+        </div>
+        <div class="footer">
+          <p>Email ini dikirim otomatis oleh Sistem Registrasi PDS PATKLIN Borneo.</p>
+          <div style="margin-top: 20px; opacity: 0.5;">
+            &copy; 2026 PDS PATKLIN Regional Borneo. all rights reserved.
+          </div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const attachments = [];
+  const pdfDataJson = await getSetting("meeting_report_pdf_data");
+  if (pdfDataJson) {
+    try {
+      const data = JSON.parse(pdfDataJson);
+      if (data.content && data.filename) {
+        attachments.push({
+          filename: data.filename,
+          content: Buffer.from(data.content, "base64"),
+        });
+      }
+    } catch (e) {
+      console.error("Gagal memproses lampiran PDF dari settings:", e);
+    }
+  }
+
+  await transporter.sendMail({
+    from,
+    to: registration.email,
+    subject: `[REMINDER] Simposium Ilmiah PDS PATKLIN Regional Borneo 2026`,
+    html,
+    attachments,
+  });
+}
