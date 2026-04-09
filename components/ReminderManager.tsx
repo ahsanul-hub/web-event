@@ -8,10 +8,18 @@ export default function ReminderManager() {
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
 
-  const [progress, setProgress] = useState({ total: 0, current: 0, sent: 0, failed: 0 });
+  const [progress, setProgress] = useState({
+    total: 0,
+    current: 0,
+    sent: 0,
+    failed: 0,
+  });
+  const [failedList, setFailedList] = useState<{ id: number; email: string }[]>(
+    [],
+  );
 
-  async function handleSend(isBatch: boolean) {
-    if (!isBatch && !testEmail) {
+  async function handleSend(isBatch: boolean, idsToRetry?: number[]) {
+    if (!isBatch && !testEmail && !idsToRetry) {
       alert("Masukkan email uji coba terlebih dahulu.");
       return;
     }
@@ -19,10 +27,14 @@ export default function ReminderManager() {
     setLoading(true);
     setMessage("");
     setIsError(false);
+
+    // Only reset failedList if it's NOT a retry
+    if (!idsToRetry) setFailedList([]);
+
     setProgress({ total: 0, current: 0, sent: 0, failed: 0 });
 
     try {
-      if (!isBatch) {
+      if (!isBatch && !idsToRetry) {
         // TEST SEND
         const res = await fetch("/api/admin/send-reminders", {
           method: "POST",
@@ -36,36 +48,41 @@ export default function ReminderManager() {
         return;
       }
 
-      // BATCH SEND (with Chunking)
-      if (!confirm("Kirim email reminder ke SELURUH peserta yang sudah membayar?")) {
+      // BATCH SEND (Normal or Retry)
+      if (
+        !idsToRetry &&
+        !confirm("Kirim email reminder ke SELURUH peserta yang sudah membayar?")
+      ) {
         setLoading(false);
         return;
       }
 
-      // 1. Get All Paid IDs
-      // Note: We'll fetch them from a dedicated simple API or registration list
-      const resList = await fetch("/api/admin/registrations?status=paid");
-      const allPaid = await resList.json();
-      const allIds = allPaid.map((p: any) => p.id);
+      let allIds = idsToRetry || [];
+
+      if (!idsToRetry) {
+        const resList = await fetch("/api/admin/registrations?status=paid");
+        const allPaid = await resList.json();
+        allIds = allPaid.map((p: any) => p.id);
+      }
 
       if (allIds.length === 0) {
-        setMessage("Tidak ada peserta berstatus lunas found.");
+        setMessage("Tidak ada peserta found.");
         setLoading(false);
         return;
       }
 
-      const chunkSize = 10;
+      const chunkSize = 5; // Dikurangi dari 10 menjadi 5 agar lebih aman
       const total = allIds.length;
       let totalSent = 0;
       let totalFailed = 0;
+      const collectedFailed: { id: number; email: string }[] = [];
 
       setProgress({ total, current: 0, sent: 0, failed: 0 });
 
-      // 2. Loop through chunks
       for (let i = 0; i < allIds.length; i += chunkSize) {
         const chunk = allIds.slice(i, i + chunkSize);
-        
-        setProgress(prev => ({ ...prev, current: i }));
+
+        setProgress((prev) => ({ ...prev, current: i }));
 
         try {
           const res = await fetch("/api/admin/send-reminders", {
@@ -73,30 +90,38 @@ export default function ReminderManager() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ selectedIds: chunk }),
           });
-          
+
           const data = await res.json();
           totalSent += data.sentCount || 0;
           totalFailed += data.failedCount || 0;
-          
-          setProgress(prev => ({ 
-            ...prev, 
+
+          if (data.failedEmails && data.failedIds) {
+            data.failedEmails.forEach((email: string, idx: number) => {
+              collectedFailed.push({ id: data.failedIds[idx], email });
+            });
+          }
+
+          setProgress((prev) => ({
+            ...prev,
             current: Math.min(i + chunkSize, total),
             sent: totalSent,
-            failed: totalFailed 
+            failed: totalFailed,
           }));
 
-          // Add a small delay between chunks to be safe
+          setFailedList([...collectedFailed]);
+
+          // Jeda ditambah menjadi 2 detik agar tidak dianggap spamming oleh Resend
           if (i + chunkSize < allIds.length) {
-            await new Promise(r => setTimeout(r, 1000));
+            await new Promise((r) => setTimeout(r, 2000));
           }
         } catch (chunkErr) {
-          console.error("Batch error", chunkErr);
           totalFailed += chunk.length;
         }
       }
 
-      setMessage(`Selesai! Berhasil mengirim ${totalSent} email. ${totalFailed > 0 ? `(Gagal: ${totalFailed})` : ""}`);
-
+      setMessage(
+        `${idsToRetry ? "(Retry) " : ""}Selesai! Berhasil mengirim ${totalSent} email. ${totalFailed > 0 ? `(Gagal: ${totalFailed})` : ""}`,
+      );
     } catch (err) {
       console.error(err);
       setMessage("Terjadi kesalahan sistem");
@@ -114,7 +139,7 @@ export default function ReminderManager() {
           paddingBottom: "10px",
           marginBottom: "20px",
         }}>
-        Pengiriman Email Reminder (Paid Participants)
+        Konfirgurasi Email Reminder (Paid Participants)
       </h3>
 
       <div
@@ -124,26 +149,128 @@ export default function ReminderManager() {
           borderRadius: "10px",
           border: "1px solid #e2e8f0",
         }}>
-        
         {/* Progress Bar (Visible during batch) */}
         {loading && progress.total > 0 && (
-          <div style={{ marginBottom: "20px", background: "#fff", padding: "15px", borderRadius: "8px", border: "1px solid #1e3a8a33" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "12px", fontWeight: "bold" }}>
+          <div
+            style={{
+              marginBottom: "20px",
+              background: "#fff",
+              padding: "15px",
+              borderRadius: "8px",
+              border: "1px solid #1e3a8a33",
+            }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "8px",
+                fontSize: "12px",
+                fontWeight: "bold",
+              }}>
               <span>Progress Pengiriman...</span>
-              <span>{progress.current} / {progress.total}</span>
+              <span>
+                {progress.current} / {progress.total}
+              </span>
             </div>
-            <div style={{ width: "100%", height: "8px", background: "#e2e8f0", borderRadius: "10px", overflow: "hidden" }}>
-              <div style={{ width: `${(progress.current / progress.total) * 100}%`, height: "100%", background: "#0f2a83", transition: "width 0.3s ease" }}></div>
+            <div
+              style={{
+                width: "100%",
+                height: "8px",
+                background: "#e2e8f0",
+                borderRadius: "10px",
+                overflow: "hidden",
+              }}>
+              <div
+                style={{
+                  width: `${(progress.current / progress.total) * 100}%`,
+                  height: "100%",
+                  background: "#0f2a83",
+                  transition: "width 0.3s ease",
+                }}></div>
             </div>
             <p style={{ fontSize: "11px", marginTop: "8px", color: "#64748b" }}>
-              Berhasil: <span style={{ color: "#10b981", fontWeight: "bold" }}>{progress.sent}</span> • 
-              Gagal: <span style={{ color: "#ef4444", fontWeight: "bold" }}>{progress.failed}</span>
+              Berhasil:{" "}
+              <span style={{ color: "#10b981", fontWeight: "bold" }}>
+                {progress.sent}
+              </span>{" "}
+              • Gagal:{" "}
+              <span style={{ color: "#ef4444", fontWeight: "bold" }}>
+                {progress.failed}
+              </span>
             </p>
           </div>
         )}
-        
+
+        {/* Failed Emails List with Retry Button */}
+        {!loading && failedList.length > 0 && (
+          <div
+            style={{
+              marginBottom: "20px",
+              background: "#fef2f2",
+              padding: "15px",
+              borderRadius: "8px",
+              border: "1px solid #ef444433",
+            }}>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "10px",
+              }}>
+              <p
+                style={{
+                  fontSize: "13px",
+                  fontWeight: "bold",
+                  color: "#ef4444",
+                  margin: 0,
+                }}>
+                ⚠️ Daftar Email yang Gagal Terkirim:
+              </p>
+              <button
+                type="button"
+                onClick={() =>
+                  handleSend(
+                    true,
+                    failedList.map((f) => f.id),
+                  )
+                }
+                style={{
+                  background: "#ef4444",
+                  color: "white",
+                  padding: "6px 12px",
+                  borderRadius: "6px",
+                  border: "none",
+                  fontSize: "12px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                }}>
+                Coba Lagi Sekarang
+              </button>
+            </div>
+            <div
+              style={{
+                maxHeight: "100px",
+                overflowY: "auto",
+                fontSize: "12px",
+                color: "#991b1b",
+              }}>
+              <ul style={{ margin: 0, paddingLeft: "15px" }}>
+                {failedList.map((item, idx) => (
+                  <li key={idx}>{item.email}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
         {/* Test Send Section */}
-        <div style={{ marginBottom: "20px", paddingBottom: "20px", borderBottom: "1px solid #e2e8f0" }}>
+        <div
+          style={{
+            marginBottom: "20px",
+            paddingBottom: "20px",
+            borderBottom: "1px solid #e2e8f0",
+          }}>
           <label
             style={{
               fontSize: "12px",

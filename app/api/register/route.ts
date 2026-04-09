@@ -100,15 +100,20 @@ export async function POST(req: Request) {
       // Update local object for email
       registration.status = "paid";
 
-      await upsertTransaction({
+      const transactionData = {
         registration_id: registration.id,
         registration_code: registration.registration_code,
         payer_name: registration.full_name,
         payer_email: registration.email,
-        amount: 0,
+        amount: "0",
         payment_method: isWhitelisted ? "whitelist" : "voucher",
-        status: "success",
-      });
+        status: "success" as const,
+        paid_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        id: 0,
+      };
+
+      await upsertTransaction(transactionData);
 
       console.log(
         `✨ ${isWhitelisted ? "Whitelisted NIK" : "100% Voucher"} detected. Registration ${registration.registration_code} marked as PAID.`,
@@ -116,7 +121,7 @@ export async function POST(req: Request) {
 
       // Must wait for email so serverless doesn't terminate context
       try {
-        await sendRegistrationEmail(registration);
+        await sendRegistrationEmail(registration, transactionData);
       } catch (emailError) {
         console.error("Email gagal dikirim:", emailError);
       }

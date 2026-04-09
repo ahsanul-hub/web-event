@@ -5,10 +5,22 @@ import { pool } from "./db";
 import type { Registration, Transaction } from "./types";
 import { getSetting } from "./settings";
 
+let transporterInstance: nodemailer.Transporter | null = null;
+let currentSmtpUser: string | null = null;
+
 function getTransporter() {
+  const user = process.env.SMTP_USER;
+
+  // Reset instance if user has changed (e.g. .env update)
+  if (transporterInstance && currentSmtpUser !== user) {
+    transporterInstance = null;
+  }
+
+  if (transporterInstance) return transporterInstance;
+  currentSmtpUser = user || null;
+
   const host = process.env.SMTP_HOST;
   const port = Number(process.env.SMTP_PORT ?? 587);
-  const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
 
   if (!host || !user || !pass) {
@@ -17,12 +29,18 @@ function getTransporter() {
     );
   }
 
-  return nodemailer.createTransport({
+  transporterInstance = nodemailer.createTransport({
     host,
     port,
-    secure: port === 465,
+    secure: port === 465, // SSL (Port 465)
     auth: { user, pass },
-  });
+    pool: false,
+    connectionTimeout: 30000, // Kembalikan ke 30s agar lebih toleran terhadap server lambat
+    greetingTimeout: 30000,
+    socketTimeout: 30000,
+  } as any);
+
+  return transporterInstance;
 }
 
 /**
@@ -30,7 +48,7 @@ function getTransporter() {
  */
 async function generateReceiptPDF(
   registration: Registration,
-  transaction?: Transaction,
+  transaction: Transaction,
 ): Promise<Buffer> {
   const doc = new jsPDF({
     orientation: "portrait",
@@ -38,177 +56,110 @@ async function generateReceiptPDF(
     format: "a4",
   });
 
-  // Colors
-  const NAVY = "#0f2a83";
-  const LIME = "#87d300";
-  const CYAN = "#00c2e0";
-  const TEXT_DARK = "#172554";
-  const TEXT_GRAY = "#64748b";
-
-  // Header
-  doc.setFillColor(NAVY);
+  // --- Header ---
+  doc.setFillColor(30, 58, 138); // blue-900
   doc.rect(0, 0, 210, 40, "F");
 
-  doc.setTextColor("#ffffff");
-  doc.setFontSize(24);
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(22);
   doc.setFont("helvetica", "bold");
-  doc.text("KWITANSI PEMBAYARAN", 105, 25, { align: "center" });
+  doc.text("PDS PATKLIN BORNEO", 105, 15, { align: "center" });
 
-  // Brand accent
-  doc.setFillColor(LIME);
-  doc.rect(0, 40, 210, 10, "F");
-  doc.setTextColor(NAVY);
-  doc.setFontSize(10);
-  doc.text("PDS PATKLIN REGIONAL BORNEO", 105, 46, { align: "center" });
-
-  // Content Area
-  let currY = 65;
-
-  // Receipt Info
-  doc.setTextColor(TEXT_GRAY);
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  doc.text("NOMOR KUITANSI", 20, currY);
-  doc.text("TANGGAL", 190, currY, { align: "right" });
+  doc.text("Official Registration Receipt", 105, 22, { align: "center" });
 
-  currY += 6;
-  doc.setTextColor(NAVY);
   doc.setFontSize(12);
-  doc.setFont("helvetica", "bold");
-  doc.text(`REG-${registration.registration_code}`, 20, currY);
+  doc.text(`REG-CODE: ${registration.registration_code}`, 105, 32, {
+    align: "center",
+  });
 
-  const paidDate = transaction?.paid_at
-    ? new Date(transaction.paid_at)
-    : new Date();
-  doc.text(
-    paidDate.toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }),
-    190,
-    currY,
-    { align: "right" },
-  );
+  // --- Content ---
+  doc.setTextColor(30, 58, 138);
+  doc.setFontSize(16);
+  doc.text("BUKTI PEMBAYARAN", 20, 55);
 
-  currY += 15;
-  doc.setDrawColor("#e2e8f0");
-  doc.line(20, currY, 190, currY);
-  currY += 10;
+  doc.setDrawColor(226, 232, 240);
+  doc.line(20, 58, 190, 58);
 
-  // Table of Details
-  autoTable(doc, {
-    startY: currY,
-    margin: { left: 20, right: 20 },
-    head: [["DESKRIPSI", "DETAIL"]],
-    body: [
-      ["Nama Lengkap", registration.full_name.toUpperCase()],
-      ["Email", registration.email],
-      ["Institusi/Instansi", registration.institution],
-      ["Kategori Peserta", registration.profession],
-      ["Tipe Kehadiran", registration.attendance_type.toUpperCase()],
-      ["Status Pembayaran", "LUNAS / TERVERIFIKASI"],
-      [
-        "Metode Pembayaran",
-        transaction?.payment_method?.toUpperCase() || "REDPAY / MANUAL",
-      ],
+  const tableData = [
+    ["Nama Peserta", registration.full_name],
+    ["Institusi", registration.institution],
+    ["Profesi", registration.profession],
+    [
+      "Metode Pembayaran",
+      (transaction.payment_method || "Online").replace(/_/g, " ").toUpperCase(),
     ],
-    theme: "striped",
-    headStyles: {
-      fillColor: NAVY,
-      textColor: "#ffffff",
-      fontSize: 11,
-      fontStyle: "bold",
-    },
-    bodyStyles: { fontSize: 10, textColor: TEXT_DARK, cellPadding: 8 },
+    ["Status", "LUNAS / PAID"],
+    [
+      "Tanggal Pembayaran",
+      transaction.paid_at
+        ? new Date(transaction.paid_at).toLocaleString("id-ID")
+        : "-",
+    ],
+  ];
+
+  autoTable(doc, {
+    startY: 65,
+    body: tableData,
+    theme: "plain",
+    styles: { fontSize: 10, cellPadding: 4 },
     columnStyles: {
-      0: { cellWidth: 50, fontStyle: "bold", textColor: TEXT_GRAY },
-      1: { cellWidth: "auto" },
+      0: { fontStyle: "bold", textColor: [100, 116, 139] }, // slate-500
+      1: { textColor: [15, 23, 42] }, // slate-900
     },
   });
 
-  currY = (doc as any).lastAutoTable.finalY + 15;
-
-  // Total Amount Box
-  doc.setFillColor("#f8fafc");
-  doc.rect(130, currY, 60, 20, "F");
-  doc.setDrawColor(CYAN);
-  doc.setLineWidth(1);
-  doc.line(130, currY, 130, currY + 20);
-
-  doc.setTextColor(TEXT_GRAY);
-  doc.setFontSize(9);
+  // Amount Box
+  const finalY = (doc as any).lastAutoTable.finalY || 100;
+  doc.setFillColor(248, 250, 252);
+  doc.rect(20, finalY + 10, 170, 20, "F");
+  doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.text("TOTAL BAYAR", 135, currY + 7);
+  doc.text("TOTAL PEMBAYARAN", 30, finalY + 22);
 
-  doc.setTextColor(NAVY);
-  doc.setFontSize(14);
-  const amount = transaction?.amount
-    ? parseFloat(String(transaction.amount))
-    : 0;
+  const amountNumber = parseFloat(transaction.amount || "0");
   const formattedAmount = new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(amount);
-  doc.text(formattedAmount, 135, currY + 15);
+    minimumFractionDigits: 0,
+  }).format(amountNumber);
 
-  currY += 40;
+  doc.setFontSize(16);
+  doc.text(formattedAmount, 180, finalY + 22, { align: "right" });
 
-  // Footer / Signature
-  doc.setTextColor(TEXT_DARK);
-  doc.setFontSize(10);
-  doc.text("Panitia Pelaksana,", 150, currY);
-  currY += 25;
-  doc.text("PDS PATKLIN Regional Borneo", 150, currY);
-
-  // Bottom Decorative
-  doc.setFillColor(NAVY);
-  doc.rect(0, 287, 210, 10, "F");
-  doc.setTextColor("#ffffff");
-  doc.setFontSize(8);
+  // Footer & Notes
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "italic");
+  doc.setTextColor(148, 163, 184); // slate-400
   doc.text(
-    "Simposium Ilmiah & Pelantikan Pengurus PDS PATKLIN Regional Borneo 2025-2028",
-    105,
-    293,
-    { align: "center" },
+    "*Harap simpan kwitansi ini sebagai bukti pendaftaran resmi dan masuk ke lokasi acara.",
+    20,
+    finalY + 45,
   );
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(30, 58, 138);
+  doc.text("Tertanda,", 150, finalY + 60);
+  doc.text("Panitia Pelaksana", 150, finalY + 85);
 
   return Buffer.from(doc.output("arraybuffer"));
 }
 
-export async function sendRegistrationEmail(registration: Registration) {
+export async function sendRegistrationEmail(
+  registration: Registration,
+  transaction?: Transaction,
+) {
   const transporter = getTransporter();
-  const from = process.env.MAIL_FROM ?? "noreply@patklin-borneo.id";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-
-  const whatsappLink = await getSetting("whatsapp_link");
-  const onlineMeetingLink = await getSetting("online_meeting_link");
+  const from =
+    process.env.MAIL_FROM ?? process.env.SMTP_USER ?? "noreply@aurapakar.com";
 
   const isPaid = registration.status === "paid";
-  const statusLabel = isPaid ? "Lunas / Terverifikasi" : "Menunggu Pembayaran";
-  const statusColor = isPaid ? "#10b981" : "#f59e0b";
+  let receiptBuffer: Buffer | null = null;
 
-  let attachments: any[] = [];
-
-  if (isPaid) {
-    try {
-      // Fetch transaction details for the PDF
-      const txResult = await pool.query<Transaction>(
-        "SELECT * FROM transactions WHERE registration_id = $1 LIMIT 1",
-        [registration.id],
-      );
-      const transaction = txResult.rows[0];
-
-      const pdfBuffer = await generateReceiptPDF(registration, transaction);
-      attachments.push({
-        filename: `Kwitansi_${registration.registration_code}.pdf`,
-        content: pdfBuffer,
-      });
-    } catch (pdfError) {
-      console.error("Gagal membuat lampiran PDF:", pdfError);
-      // We still send the email even if PDF fails
-    }
+  if (isPaid && transaction) {
+    receiptBuffer = await generateReceiptPDF(registration, transaction);
   }
 
   const html = `
@@ -217,116 +168,47 @@ export async function sendRegistrationEmail(registration: Registration) {
     <head>
       <meta charset="utf-8">
       <style>
-        body { font-family: 'Inter', Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f6fa; color: #172554; }
-        .container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .header { background-color: #0f2a83; padding: 30px 40px; text-align: center; }
-        .header h1 { color: #ffffff; font-size: 20px; font-weight: 800; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
-        .hero { background-color: #87d300; padding: 15px; text-align: center; color: #0f2a83; font-weight: 700; font-size: 14px; }
-        .content { padding: 40px; }
-        .greeting { font-size: 18px; font-weight: 700; margin: 0 0 10px; color: #0f2a83; }
-        .message { font-size: 15px; line-height: 1.6; color: #334155; margin-bottom: 25px; }
-        .info-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 25px; }
-        .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
-        .info-row:last-child { border-bottom: none; }
-        .info-label { font-size: 13px; color: #64748b; font-weight: 600; text-transform: uppercase; }
-        .info-value { font-size: 14px; color: #0f2a83; font-weight: 700; }
-        .status-badge { display: inline-block; padding: 4px 12px; border-radius: 99px; font-size: 12px; font-weight: 700; background-color: ${statusColor}20; color: ${statusColor}; border: 1px solid ${statusColor}40; }
-        .cta-container { text-align: center; margin-top: 30px; }
-        .btn { display: inline-block; padding: 14px 24px; background: linear-gradient(135deg, #1a3b94, #0a1f66); color: #ffffff !important; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 14px; box-shadow: 0 4px 6px rgba(15,42,131,0.2); margin: 5px; }
-        .btn-wa { background: linear-gradient(135deg, #25D366, #128C7E); box-shadow: 0 4px 6px rgba(37,211,102,0.2); }
-        .btn-zoom { background: linear-gradient(135deg, #2D8CFF, #0B5ED7); box-shadow: 0 4px 6px rgba(45,140,255,0.2); }
-        .footer { padding: 30px 40px; background-color: #f8fafc; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
-        .footer p { margin: 5px 0; }
-        .event-details { margin-top: 15px; padding-top: 15px; border-top: 1px dotted #cbd5e1; }
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f8fafc; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
+        .header { background: linear-gradient(135deg, #1e3a8a, #1e40af); padding: 40px 20px; text-align: center; color: white; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; }
+        .content { padding: 40px; color: #1e293b; }
+        .greeting { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: #0f172a; }
+        .message { line-height: 1.6; margin-bottom: 25px; }
+        .footer { background-color: #f1f5f9; padding: 20px; text-align: center; color: #64748b; font-size: 13px; }
+        .receipt-badge { display: inline-block; padding: 12px 24px; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; color: #166534; font-weight: 700; font-size: 14px; margin: 20px 0; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <h1>PDS PATKLIN <span style="color: #87d300;">BORNEO</span></h1>
-        </div>
-        <div class="hero">
-          Simposium Ilmiah & Pelantikan Pengurus 2025-2028
+          <h1>PDS PATKLIN <span style="color: #4ade80;">BORNEO</span></h1>
         </div>
         <div class="content">
-          <h2 class="greeting">Halo, ${registration.full_name}</h2>
+          <p class="greeting">Halo, ${registration.full_name}!</p>
+          <div class="receipt-badge">${isPaid ? "PEMBAYARAN KONFIRMASI" : "PENDAFTARAN DITERIMA"}</div>
           <p class="message">
+            Terima kasih atas partisipasi Anda dalam <b>Simposium Ilmiah PDS PATKLIN Regional Borneo 2026</b>.
             ${
               isPaid
-                ? "Terima kasih! Pembayaran Anda telah kami verifikasi. Terlampir adalah Kwitansi Resmi Anda sebagai bukti pembayaran yang sah. Mohon simpan Kode Registrasi ini sebagai bukti kehadiran."
-                : "Terima kasih telah mendaftar. Silakan lakukan pembayaran sesuai instruksi di bawah ini untuk mengamankan slot kehadiran Anda."
+                ? "Kami telah menerima pembayaran Anda secara lunas."
+                : `Pendaftaran Anda telah kami terima dengan kode: <b>${registration.registration_code}</b>. Silakan selesaikan pembayaran melalui tautan berikut jika belum melakukannya: <a href="${registration.payment_link}">${registration.payment_link}</a>`
             }
           </p>
-          
-          <div class="info-box">
-            <div style="display: table; width: 100%;">
-              <div style="display: table-row;">
-                <div style="display: table-cell; padding: 8px 0; font-size: 13px; color: #64748b; font-weight: 600; text-transform: uppercase;">Kode Registrasi</div>
-                <div style="display: table-cell; padding: 8px 0; text-align: right; font-size: 16px; color: #00c2e0; font-weight: 800; font-family: monospace;">${registration.registration_code}</div>
-              </div>
-              <div style="display: table-row;">
-                <div style="display: table-cell; padding: 8px 0; font-size: 13px; color: #64748b; font-weight: 600; text-transform: uppercase;">Status</div>
-                <div style="display: table-cell; padding: 8px 0; text-align: right;"><span class="status-badge">${statusLabel}</span></div>
-              </div>
-              <div style="display: table-row;">
-                <div style="display: table-cell; padding: 8px 0; font-size: 13px; color: #64748b; font-weight: 600; text-transform: uppercase;">Profesi</div>
-                <div style="display: table-cell; padding: 8px 0; text-align: right; font-size: 14px; color: #0f2a83; font-weight: 700;">${registration.profession}</div>
-              </div>
-              <div style="display: table-row;">
-                <div style="display: table-cell; padding: 8px 0; font-size: 13px; color: #64748b; font-weight: 600; text-transform: uppercase;">Tipe Kehadiran</div>
-                <div style="display: table-cell; padding: 8px 0; text-align: right; font-size: 14px; color: #0f2a83; font-weight: 700; text-transform: capitalize;">${registration.attendance_type}</div>
-              </div>
-            </div>
-          </div>
-
           ${
             isPaid
               ? `
-            <div class="cta-container">
-              ${whatsappLink ? `<a href="${whatsappLink}" class="btn btn-wa">Join WhatsApp Group</a>` : ""}
-              ${
-                registration.attendance_type.toLowerCase() === "online" &&
-                onlineMeetingLink
-                  ? `<a href="${onlineMeetingLink}" class="btn btn-zoom">Online Meeting Link</a>`
-                  : ""
-              }
-            </div>
-            <p style="font-size: 13px; color: #64748b; text-align: center; font-style: italic; margin-top: 15px;">
-              *Kwitansi digital telah dilampirkan dalam email ini.
-              ${whatsappLink ? "<br/>Mohon segera bergabung ke grup WhatsApp di atas untuk informasi teknis lebih lanjut." : ""}
-            </p>
-          `
-              : `
-            <div class="cta-container">
-              <a href="${appUrl}/payment/${registration.registration_code}" class="btn">Lanjutkan Pembayaran</a>
-            </div>
-            <p style="text-align: center; font-size: 13px; color: #94a3b8; margin-top: 15px;">
-              Abaikan jika Anda sudah melakukan pembayaran.
-            </p>
-          `
+          <p class="message">
+            Bersama email ini, kami lampirkan **Kwitansi Resmi** sebagai bukti pendaftaran Anda. Harap simpan file tersebut untuk keperluan registrasi di lokasi.
+          </p>`
+              : ""
           }
-
-
-          <div class="event-details">
-            <p style="font-size: 14px; font-weight: 700; color: #0f2a83; margin: 0 0 5px;">📍 Lokasi & Waktu Acara</p>
-            <p style="font-size: 13px; margin: 0; color: #475569;">Sabtu, 11 April 2026</p>
-            <p style="font-size: 13px; margin: 0; color: #475569;">Platinum Hotel & Convention Center Balikpapan</p>
-          </div>
+          <p class="message">
+            Informasi terkait link meeting (bagi peserta online) dan rundown acara akan kami informasikan kembali melalui email atau grup WhatsApp resmi.
+          </p>
         </div>
         <div class="footer">
-          <p style="margin-bottom: 15px; font-weight: 700; color: #64748b; font-size: 13px;">Untuk Informasi & Bantuan:</p>
-          <div style="display: table; width: 100%; margin-bottom: 20px; font-size: 12px; color: #94a3b8;">
-            <div style="display: table-row;">
-              <div style="display: table-cell; text-align: left; padding: 2px 0;">Ramlah</div>
-              <div style="display: table-cell; text-align: right; padding: 2px 0;">0821-5701-2190</div>
-            </div>
-           
-          </div>
-          <p>Jika butuh bantuan, hubungi Panitia melalui dashboard pendaftaran.</p>
-          <p><a href="${appUrl}/payment/${registration.registration_code}" style="color: #00c2e0; text-decoration: none;">Lihat Detail Pendaftaran &rarr;</a></p>
-          <div style="margin-top: 20px; opacity: 0.5;">
-            &copy; 2026 PDS PATKLIN Regional Borneo. all rights reserved.
-          </div>
+          &copy; 2026 PDS PATKLIN Regional Borneo. all rights reserved.
         </div>
       </div>
     </body>
@@ -337,21 +219,28 @@ export async function sendRegistrationEmail(registration: Registration) {
     from,
     to: registration.email,
     subject: isPaid
-      ? `Konfirmasi Pembayaran: ${registration.registration_code}`
-      : `[PENTING] Kode Registrasi & Instruksi Pembayaran: ${registration.registration_code}`,
+      ? `[KWITANSI RESMI] Pendaftaran PDS PATKLIN Borneo 2026 - ${registration.registration_code}`
+      : `[KONFIRMASI] Registrasi PDS PATKLIN Borneo 2026 - ${registration.registration_code}`,
     html,
-    attachments,
+    attachments: receiptBuffer
+      ? [
+          {
+            content: receiptBuffer,
+            filename: `Kwitansi_PATKLIN_Borneo_${registration.registration_code}.pdf`,
+          },
+        ]
+      : [],
   });
 }
 
 export async function sendMeetingEmail(
   registration: Registration,
-  onlineMeetingLink: string,
-  whatsappLink: string,
+  meetingUrl: string,
+  whatsappUrl: string = "",
 ) {
   const transporter = getTransporter();
-  const from = process.env.MAIL_FROM ?? "noreply@patklin-borneo.id";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const from =
+    process.env.MAIL_FROM ?? process.env.SMTP_USER ?? "noreply@aurapakar.com";
 
   const html = `
     <!DOCTYPE html>
@@ -359,93 +248,50 @@ export async function sendMeetingEmail(
     <head>
       <meta charset="utf-8">
       <style>
-        body { font-family: 'Inter', Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f6fa; color: #172554; }
-        .container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .header { background-color: #0f2a83; padding: 30px 40px; text-align: center; }
-        .header h1 { color: #ffffff; font-size: 20px; font-weight: 800; margin: 0; text-transform: uppercase; letter-spacing: 1px; }
-        .hero { background-color: #87d300; padding: 15px; text-align: center; color: #0f2a83; font-weight: 700; font-size: 14px; }
-        .content { padding: 30px 40px; }
-        .greeting { font-size: 16px; font-weight: 700; margin: 0 0 15px; color: #0f2a83; }
-        .message { font-size: 14px; line-height: 1.6; color: #334155; margin-bottom: 20px; text-align: justify; }
-        .details-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 25px; font-size: 14px; }
-        .timeline-box { background-color: #fff7ed; border: 1px solid #ffedd5; border-radius: 12px; padding: 20px; margin-bottom: 25px; font-size: 13px; color: #9a3412; }
-        .timeline-title { font-weight: 800; margin-bottom: 10px; color: #c2410c; text-transform: uppercase; }
-        .cta-container { text-align: center; margin-top: 25px; margin-bottom: 25px; }
-        .btn { display: inline-block; padding: 14px 24px; background: linear-gradient(135deg, #1a3b94, #0a1f66); color: #ffffff !important; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 14px; box-shadow: 0 4px 6px rgba(15,42,131,0.2); }
-        .footer { padding: 30px 40px; background-color: #f8fafc; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+        body { font-family: 'Inter', Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f8fafc; color: #1e293b; }
+        .container { max-width: 600px; margin: 20px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .header { background-color: #0f172a; padding: 30px 40px; text-align: center; color: white; }
+        .header h1 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: 1px; }
+        .content { padding: 40px; }
+        .message { font-size: 15px; line-height: 1.8; margin-bottom: 24px; color: #475569; }
+        .cta-box { background-color: #f1f5f9; padding: 24px; border-radius: 12px; text-align: center; margin: 24px 0; }
+        .meeting-link { display: inline-block; padding: 14px 28px; background-color: #2563eb; color: #ffffff !important; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2); }
+        .alternative-link { font-size: 13px; color: #94a3b8; margin-top: 12px; display: block; word-break: break-all; }
+        .footer { padding: 30px 40px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9; }
       </style>
     </head>
     <body>
       <div class="container">
         <div class="header">
-          <h1>PDS PATKLIN <span style="color: #87d300;">BORNEO</span></h1>
-        </div>
-        <div class="hero">
-          UNDANGAN WEBINAR & PERTEMUAN ILMIAH
+          <h1>LINK MEETING WEBINAR</h1>
         </div>
         <div class="content">
-          <p class="greeting">Bapak/Ibu <b>${registration.full_name}</b> yang kami hormati, </p>
+          <p class="message">
+            Halo <b>${registration.full_name}</b>, berikut adalah tautan akses untuk mengikuti webinar <b>"Clinical Laboratory Perspective in Hematology and Endocrine Disease"</b>:
+          </p>
           
-          <p class="message">
-            Dalam rangka Pelantikan Pengurus PDS PATKLIN Regional Borneo (Balikpapan, Palangkaraya, Banjarmasin, Pontianak, dan Tarakan) Masa Bakti 2025–2028, kami mengucapkan terima kasih atas partisipasi Bapak/Ibu/ Saudara yang telah mendaftar sebagai peserta dalam kegiatan webinar <b>Clinical Laboratory Perspective in Hematology and Endocrine Disease</b> yang akan diselenggarakan pada:
-          </p>
-
-          <div class="details-box">
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 4px 0; width: 110px; color: #64748b; font-weight: 600;">Hari/Tanggal</td>
-                <td style="padding: 4px 0; color: #0f2a83; font-weight: 700;">: Sabtu, 11 April 2026</td>
-              </tr>
-              <tr>
-                <td style="padding: 4px 0; color: #64748b; font-weight: 600;">Waktu</td>
-                <td style="padding: 4px 0; color: #0f2a83; font-weight: 700;">: 08.00 WITA - Selesai</td>
-              </tr>
-              <tr>
-                <td style="padding: 4px 0; color: #64748b; font-weight: 600;">Media</td>
-                <td style="padding: 4px 0; color: #0f2a83; font-weight: 700;">: Zoom Meeting</td>
-              </tr>
-            </table>
+          <div class="cta-box">
+            <a href="${meetingUrl}" class="meeting-link">Klik untuk Masuk Zoom</a>
+            <span class="alternative-link">Tautan Cadangan: ${meetingUrl}</span>
           </div>
 
-          <p class="message">
-            Bagi peserta yang mengikuti secara online, berikut kami sampaikan tautan (link) Zoom yang dapat digunakan untuk mengikuti kegiatan webinar:
-          </p>
-
-          <div class="cta-container">
-            <a href="${onlineMeetingLink}" class="btn">Join Zoom Meeting</a>
-            <p style="margin-top: 15px; font-size: 12px; color: #64748b; word-break: break-all;">
-              Link: <a href="${onlineMeetingLink}" style="color: #00c2e0; text-decoration: none;">${onlineMeetingLink}</a>
-            </p>
-            <p style="margin-top: 5px; font-size: 13px; color: #0f2a83; font-weight: 600;">
-              ID Rapat: (Tersemat pada Link)<br/>
-              Kode Sandi: (Tersemat pada Link)
-            </p>
+          ${
+            whatsappUrl
+              ? `
+          <div class="cta-box" style="background-color: #f0fdf4;">
+            <p style="font-size: 13px; margin-bottom: 12px; color: #166534;">Pastikan Anda juga sudah bergabung di grup WhatsApp peserta:</p>
+            <a href="${whatsappUrl}" style="background-color: #22c55e; box-shadow: 0 4px 6px rgba(34, 197, 94, 0.2);" class="meeting-link">Gabung Grup WhatsApp</a>
           </div>
-
-          <div class="timeline-box">
-            <div class="timeline-title">⚠️ MOHON DIPERHATIKAN TIMELINE PLATARAN SEHAT BERIKUT:</div>
-            <table style="width: 100%; font-size: 13px; color: #9a3412;">
-              <tr><td style="padding: 2px 0;"><b>Pre Test:</b> Sabtu, 11 April 2026 07:00 - 09.00 WITA</td></tr>
-              <tr><td style="padding: 2px 0;"><b>Post Test:</b> Minggu, 12 April 2026 17.00 - 18.00 WITA</td></tr>
-              <tr><td style="padding: 2px 0;"><b>Mulai Pembelajaran:</b> 11 April 2026, 07:00 WITA</td></tr>
-              <tr><td style="padding: 2px 0;"><b>Selesai Pembelajaran:</b> 12 April 2026, 18.00 WITA</td></tr>
-            </table>
-          </div>
+          `
+              : ""
+          }
 
           <p class="message">
-            Kami mengharapkan kehadiran Bapak/Ibu/ Saudara hadir tepat waktu agar dapat mengikuti seluruh rangkaian acara dengan baik. Atas perhatian dan partisipasinya, kami ucapkan terima kasih.
-          </p>
-
-          <p class="message" style="margin-top: 30px;">
-            Hormat kami,<br/>
-            <b>Panitia PDS PATKLIN Borneo</b>
+            Terima kasih atas partisipasinya. Kami menyarankan Anda bergabung 10-15 menit sebelum acara dimulai.
           </p>
         </div>
         <div class="footer">
-          <p>Email ini dikirim otomatis oleh Sistem Registrasi PDS PATKLIN Borneo.</p>
-          <div style="margin-top: 20px; opacity: 0.5;">
-            &copy; 2026 PDS PATKLIN Regional Borneo. all rights reserved.
-          </div>
+          &copy; 2026 PDS PATKLIN Regional Borneo. email otomatis oleh sistem.
         </div>
       </div>
     </body>
@@ -453,7 +299,6 @@ export async function sendMeetingEmail(
   `;
 
   const attachments = [];
-
   const pdfDataJson = await getSetting("meeting_report_pdf_data");
   if (pdfDataJson) {
     try {
@@ -480,7 +325,8 @@ export async function sendMeetingEmail(
 
 export async function sendReminderEmail(registration: Registration) {
   const transporter = getTransporter();
-  const from = process.env.MAIL_FROM ?? "noreply@patklin-borneo.id";
+  const from =
+    process.env.MAIL_FROM ?? process.env.SMTP_USER ?? "noreply@aurapakar.com";
 
   const html = `
     <!DOCTYPE html>
@@ -569,7 +415,7 @@ export async function sendReminderEmail(registration: Registration) {
           </p>
           
           <p class="message" style="margin-top: 30px;">
-            Hormat kami,<br/>
+            Hormat kami,<br>
             <b>Panitia PDS PATKLIN Regional Borneo</b>
           </p>
         </div>
@@ -600,11 +446,13 @@ export async function sendReminderEmail(registration: Registration) {
     }
   }
 
-  await transporter.sendMail({
+  const result = await transporter.sendMail({
     from,
     to: registration.email,
     subject: `[REMINDER] Simposium Ilmiah PDS PATKLIN Regional Borneo 2026`,
     html,
     attachments,
   });
+
+  console.log("Email Sent via SMTP:", result.messageId);
 }

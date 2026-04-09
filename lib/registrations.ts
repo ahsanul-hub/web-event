@@ -121,7 +121,7 @@ export async function upsertTransaction(data: {
   registration_code: string;
   payer_name: string;
   payer_email: string;
-  amount: number;
+  amount: number | string;
   payment_method: string;
   status: string;
 }): Promise<void> {
