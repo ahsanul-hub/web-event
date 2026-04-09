@@ -40,6 +40,13 @@ export async function POST(req: Request) {
     const body = await req.json();
     const validated = bodySchema.parse(body);
 
+    if (validated.attendanceType === "offline") {
+      return NextResponse.json(
+        { message: "Pendaftaran Offline sudah ditutup. Silahkan pilih tipe Daring (Online)." },
+        { status: 400 },
+      );
+    }
+
     // Check NIK uniqueness before creating anything
     const existingByNIK = await getRegistrationByNIK(validated.nik);
     if (existingByNIK) {

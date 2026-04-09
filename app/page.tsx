@@ -239,7 +239,7 @@ export default function HomePage() {
           <ol>
             <li>Isi formulir pendaftaran dengan lengkap dan benar.</li>
             <li>
-              Pilih Tipe Kehadiran (Online / Offline) dan lakukan pembayaran.
+              Lakukan pembayaran pendaftaran simposium secara online.
             </li>
             <li>
               Anda akan menerima **Kode Registrasi** melalui email setelah
@@ -249,10 +249,10 @@ export default function HomePage() {
               **Peserta Online**: Kode digunakan untuk konfirmasi saat bergabung
               di Zoom Meeting.
             </li>
-            <li>
+            {/* <li>
               **Peserta Offline**: Tunjukkan Kode Registrasi kepada panitia saat
               registrasi ulang di lokasi (On-site).
-            </li>
+            </li> */}
           </ol>
           {/* Info Kontak */}
           <div
