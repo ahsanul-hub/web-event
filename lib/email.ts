@@ -343,6 +343,7 @@ export async function sendReminderEmail(registration: Registration) {
         .greeting { font-size: 16px; font-weight: 700; margin: 0 0 15px; color: #0f2a83; }
         .message { font-size: 14px; line-height: 1.6; color: #334155; margin-bottom: 20px; text-align: justify; }
         .details-box { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 25px; font-size: 14px; }
+        .zoom-box { background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 20px; margin-bottom: 25px; font-size: 14px; color: #1e40af; }
         .timeline-box { background-color: #fff7ed; border: 1px solid #ffedd5; border-radius: 12px; padding: 20px; margin-bottom: 25px; font-size: 13px; color: #9a3412; }
         .timeline-title { font-weight: 800; margin-bottom: 10px; color: #c2410c; text-transform: uppercase; }
         .cta-container { margin: 25px 0; }
@@ -365,7 +366,7 @@ export async function sendReminderEmail(registration: Registration) {
           <p class="greeting">Bapak/Ibu Prof / Dr / dr <b>${registration.full_name}</b> yang kami hormati, </p>
           
           <p class="message">
-            Dalam rangka Pelantikan Pengurus PDS PATKLIN Regional Borneo (Balikpapan, Palangkaraya, Banjarmasin, Pontianak, dan Tarakan) Masa Bakti 2025–2028, kami mengucapkan terima kasih atas partisipasi Bapak/Ibu/ Saudara yang telah mendaftar sebagai peserta dalam kegiatan webinar <b>"Clinical Laboratory Perspective in Hematology and Endocrine Disease"</b> yang akan diselenggarakan pada:
+            Terima kasih atas partisipasi Bapak/Ibu/ Saudara yang telah mendaftar sebagai sebagai peserta dalam kegiatan webinar <b>“Clinical Laboratory Perspective in Hematology and Endocrine Disease”</b> yang akan diselenggarakan pada:
           </p>
           
           <div class="details-box">
@@ -386,37 +387,46 @@ export async function sendReminderEmail(registration: Registration) {
           </div>
 
           <p class="message">
-            <b>Bagi peserta offline</b>, registrasi akan dibuka pukul 09.00 WITA.<br/>
-            <b>Bagi peserta online</b>, tautan (link) Zoom akan diberitahukan via email pada H-1 dan juga akan dibagikan melalui grup WhatsApp.
+            <b>Bagi peserta offline</b>, registrasi akan dibuka pukul 09.30 WITA.
+          </p>
+
+          <div class="zoom-box">
+            <p style="margin: 0 0 10px; font-weight: 700;">Bagi peserta yang mendaftar online, tautan (link) Zoom sebagai berikut:</p>
+            <p style="margin: 0 0 5px;"><a href="https://zoom.us/j/97605374997?pwd=Ql91hsFiTf5TAVr7247F8gosubSstt.1" style="color: #2563eb; text-decoration: underline; word-break: break-all;">https://zoom.us/j/97605374997?pwd=Ql91hsFiTf5TAVr7247F8gosubSstt.1</a></p>
+            <p style="margin: 0;"><b>Passcode:</b> patklin26</p>
+          </div>
+
+          <p class="message">
+            Berikut ini link YouTube Streaming apabila kapasitas Zoom penuh:<br/>
+            <a href="https://youtube.com/live/fCuz-jEMyXE?feature=share" style="color: #2563eb;">https://youtube.com/live/fCuz-jEMyXE?feature=share</a>
           </p>
 
           <div class="timeline-box">
-            <div class="timeline-title">⚠️ TIMELINE PLATARAN SEHAT:</div>
+            <div class="timeline-title">⚠️ MOHON DIPERHATIKAN TIMELINE PLATARAN SEHAT BERIKUT:</div>
             <ul class="bullet-list">
-              <li>Peserta tidak perlu minta akses, tunggu dan cek berkala sampai dengan diverifikasi. Selama data NIK & email yang didaftarkan sudah benar, <b>PASTI</b> akan diverifikasi.</li>
-              <li><b>Pre Test:</b> Sabtu, 11 April 2026 (07:00 - 18.00 WITA)</li>
-              <li><b>Post Test:</b> Minggu, 12 April 2026 (17.00 WITA) s.d Rabu, 15 April 2026 (18.00 WITA)</li>
+              <li>Peserta tidak perlu minta akses, tunggu dan cek berkala sampai dengan di verifikasi. Selama data NIK & email yang didaftarkan kemarin sudah benar, <b>PASTI</b> akan diverifikasi.</li>
+              <li><b>Pre Test:</b> Sabtu, 11 April 2026 07:00 - 18.00 WITA</li>
+              <li><b>Post Test:</b> Minggu 12 April 2026 17.00 s.d Rabu, 15 April 2026 18.00 WITA</li>
             </ul>
           </div>
 
-          <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: separate; border-spacing: 12px 0; margin: 25px 0;">
-            <tr>
-              <td style="width: 50%; vertical-align: middle;">
-                <a href="https://chat.whatsapp.com/Fl04qFt3ZOdDDKu4wEtNqr?mode=gi_t" class="btn btn-wa">Gabung Grup WhatsApp</a>
-              </td>
-              <td style="width: 50%; vertical-align: middle;">
-                <a href="https://drive.google.com/drive/folders/1VSwVDpJ2NfQhA3hsQNmaGEsmztndwifR" class="btn">Link Materi (Drive)</a>
-              </td>
-            </tr>
-          </table>
+          <div style="margin: 25px 0;">
+            <p style="font-size: 14px; margin-bottom: 10px; color: #334155;">Berikut ini link group Whatsapp khusus Peserta untuk reminding kegiatan:</p>
+            <a href="https://chat.whatsapp.com/Fl04qFt3ZOdDDKu4wEtNqr?mode=gi_t" class="btn btn-wa">Gabung Grup WhatsApp</a>
+          </div>
+
+          <div style="margin: 25px 0;">
+            <p style="font-size: 14px; margin-bottom: 10px; color: #334155;">Link Materi (akan diupdate berkala):</p>
+            <a href="https://drive.google.com/drive/folders/1VSwVDpJ2NfQhA3hsQNmaGEsmztndwifR" class="btn">Buka Drive Materi</a>
+          </div>
 
           <p class="message">
-            Kami mengharapkan kehadiran Bapak/Ibu/ Saudara hadir tepat waktu agar dapat mengikuti seluruh rangkaian acara dengan baik. Atas perhatian dan partisipasinya, kami ucapkan terima kasih.
+            Atas perhatian dan partisipasinya, kami ucapkan terima kasih.
           </p>
           
           <p class="message" style="margin-top: 30px;">
             Hormat kami,<br>
-            <b>Panitia PDS PATKLIN Regional Borneo</b>
+            <b>Panitia</b>
           </p>
         </div>
         <div class="footer">
