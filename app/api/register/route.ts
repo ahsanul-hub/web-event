@@ -40,9 +40,25 @@ export async function POST(req: Request) {
     const body = await req.json();
     const validated = bodySchema.parse(body);
 
+    const countRes = await pool.query(
+      "SELECT COUNT(*) as count FROM registrations WHERE status != 'cancelled'",
+    );
+    if (parseInt(countRes.rows[0].count) >= 990) {
+      return NextResponse.json(
+        {
+          message:
+            "Batas kuota pendaftaran  telah tercapai. Pendaftaran resmi ditutup.",
+        },
+        { status: 403 },
+      );
+    }
+
     if (validated.attendanceType === "offline") {
       return NextResponse.json(
-        { message: "Pendaftaran Offline sudah ditutup. Silahkan pilih tipe Daring (Online)." },
+        {
+          message:
+            "Pendaftaran Offline sudah ditutup. Silahkan pilih tipe Daring (Online).",
+        },
         { status: 400 },
       );
     }

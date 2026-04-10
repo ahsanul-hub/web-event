@@ -48,7 +48,6 @@ const PRICING_MAP: Record<string, number> = {
 };
 
 const ATTENDANCE_TYPES = [
-  // { value: "offline", label: "Luring (Offline)" },
   { value: "online", label: "Daring (Online) Khusus Domisili Luar Balikpapan" },
 ];
 
@@ -77,10 +76,25 @@ export default function RegistrationForm() {
   } | null>(null);
   const [voucherError, setVoucherError] = useState("");
   const [hasActiveVouchers, setHasActiveVouchers] = useState(false);
+  const [isClosed, setIsClosed] = useState(false);
+  const [checkingStatus, setCheckingStatus] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // Check if there are any active vouchers to determine if we should show the input
+    const checkStatus = async () => {
+      try {
+        const res = await fetch("/api/registrations/status");
+        if (res.ok) {
+          const data = await res.json();
+          setIsClosed(data.isClosed);
+        }
+      } catch (err) {
+        console.error("Error checking status:", err);
+      } finally {
+        setCheckingStatus(false);
+      }
+    };
+
     const checkVouchers = async () => {
       try {
         const res = await fetch("/api/vouchers/active");
@@ -92,6 +106,8 @@ export default function RegistrationForm() {
         console.error("Error checking vouchers:", err);
       }
     };
+
+    checkStatus();
     checkVouchers();
   }, []);
 
@@ -175,6 +191,45 @@ export default function RegistrationForm() {
     }
   }
 
+  if (checkingStatus) {
+    return (
+      <div className="form-card" style={{ textAlign: "center", padding: "60px 20px" }}>
+        <p style={{ color: "#64748b" }}>Memuat status pendaftaran...</p>
+      </div>
+    );
+  }
+
+  if (isClosed) {
+    return (
+      <div className="form-card" style={{ textAlign: "center", padding: "60px 20px" }}>
+        <div style={{ fontSize: "50px", marginBottom: "20px" }}>🔒</div>
+        <h2 style={{ color: "#1e3a8a", fontSize: "24px", fontWeight: 800, marginBottom: "15px" }}>
+          REGISTRASI DITUTUP
+        </h2>
+        <p style={{ color: "#64748b", lineHeight: 1.6, maxWidth: "400px", margin: "0 auto" }}>
+          Mohon maaf, batas kuota pendaftaran telah tercapai dan pendaftaran resmi ditutup. 
+          Terima kasih atas antusiasme Anda.
+        </p>
+        <div style={{ marginTop: "30px" }}>
+          <button 
+            onClick={() => router.push("/")}
+            style={{ 
+              padding: "12px 30px", 
+              borderRadius: "10px", 
+              fontWeight: 700,
+              background: "#f1f5f9",
+              border: "1px solid #e2e8f0",
+              color: "#475569",
+              cursor: "pointer"
+            }}
+          >
+            Kembali ke Beranda
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const currentPrice =
     form.attendanceType === "online"
       ? 50000
@@ -182,7 +237,6 @@ export default function RegistrationForm() {
 
   return (
     <form className="form-card" onSubmit={handleSubmit}>
-      {/* Form Header */}
       <div className="form-header">
         <h2>Form Pendaftaran Peserta</h2>
         <p>
@@ -191,13 +245,9 @@ export default function RegistrationForm() {
         </p>
       </div>
 
-      {/* Form Body */}
       <div className="form-body">
-        {/* Nama KTP */}
         <div className="form-group">
-          <label>
-            Nama KTP <span className="required">*</span>
-          </label>
+          <label>Nama KTP <span className="required">*</span></label>
           <input
             name="namaKtp"
             required
@@ -207,11 +257,8 @@ export default function RegistrationForm() {
           />
         </div>
 
-        {/* Nama Lengkap & Gelar */}
         <div className="form-group">
-          <label>
-            Nama Lengkap &amp; Gelar <span className="required">*</span>
-          </label>
+          <label>Nama Lengkap &amp; Gelar <span className="required">*</span></label>
           <input
             name="fullName"
             required
@@ -221,11 +268,8 @@ export default function RegistrationForm() {
           />
         </div>
 
-        {/* NIK */}
         <div className="form-group">
-          <label>
-            NIK <span className="required">*</span>
-          </label>
+          <label>NIK <span className="required">*</span></label>
           <input
             name="nik"
             type="text"
@@ -241,11 +285,8 @@ export default function RegistrationForm() {
           />
         </div>
 
-        {/* Institusi / Rumah Sakit */}
         <div className="form-group">
-          <label>
-            Institusi/Rumah Sakit Asal <span className="required">*</span>
-          </label>
+          <label>Institusi/Rumah Sakit Asal <span className="required">*</span></label>
           <input
             name="institution"
             required
@@ -255,11 +296,8 @@ export default function RegistrationForm() {
           />
         </div>
 
-        {/* Kota Asal */}
         <div className="form-group">
-          <label>
-            Kota Asal <span className="required">*</span>
-          </label>
+          <label>Kota Asal <span className="required">*</span></label>
           <input
             name="kotaAsal"
             required
@@ -269,11 +307,8 @@ export default function RegistrationForm() {
           />
         </div>
 
-        {/* Email */}
         <div className="form-group">
-          <label>
-            Alamat Email <span className="required">*</span>
-          </label>
+          <label>Alamat Email <span className="required">*</span></label>
           <input
             type="email"
             name="email"
@@ -282,22 +317,11 @@ export default function RegistrationForm() {
             value={form.email}
             onChange={handleChange}
           />
-          <p className="form-hint">
-            Mohon cantumkan sesuai email LMS. E-mail ini akan digunakan untuk
-            menerima konfirmasi pendaftaran dan kuitansi pembayaran
-          </p>
-          <p className="form-hint">
-            Email ini akan digunakan untuk menerima link zoom (bagi peserta
-            online)
-          </p>
-          <p className="form-hint"></p>
+          <p className="form-hint">Mohon cantumkan sesuai email LMS (Satu Sehat/Plataran Sehat).</p>
         </div>
 
-        {/* WhatsApp */}
         <div className="form-group">
-          <label>
-            Nomor WhatsApp <span className="required">*</span>
-          </label>
+          <label>Nomor WhatsApp <span className="required">*</span></label>
           <input
             name="phone"
             required
@@ -305,84 +329,32 @@ export default function RegistrationForm() {
             value={form.phone}
             onChange={handleChange}
           />
-          <p className="form-hint">Gunakan format: 08xxxxxxxxxx atau +62xxx</p>
         </div>
 
         <div className="grid">
-          {/* Kategori/Profesi */}
           <div className="form-group">
-            <label>
-              Kategori <span className="required">*</span>
-            </label>
-            <select
-              name="profession"
-              required
-              value={form.profession}
-              onChange={handleChange}>
-              <option value="" disabled>
-                Pilih kategori
-              </option>
-              {PROFESSIONS.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
+            <label>Kategori <span className="required">*</span></label>
+            <select name="profession" required value={form.profession} onChange={handleChange}>
+              <option value="" disabled>Pilih kategori</option>
+              {PROFESSIONS.map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
-            <p className="form-hint">
-              Harga tiket:{" "}
-              <b>
-                {new Intl.NumberFormat("id-ID", {
-                  style: "currency",
-                  currency: "IDR",
-                  maximumFractionDigits: 0,
-                }).format(currentPrice)}
-              </b>
-            </p>
           </div>
 
-          {/* Tipe Kehadiran */}
           <div className="form-group">
-            <label>
-              Tipe Kehadiran <span className="required">*</span>
-            </label>
-            <select
-              name="attendanceType"
-              required
-              value={form.attendanceType}
-              onChange={handleChange}>
-              {ATTENDANCE_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
+            <label>Tipe Kehadiran <span className="required">*</span></label>
+            <select name="attendanceType" required value={form.attendanceType} onChange={handleChange}>
+              {ATTENDANCE_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
-            <p className="form-hint">Pilih metode kehadiran Anda</p>
           </div>
         </div>
 
-        {/* Metode Pembayaran */}
         <div className="form-group">
-          <label>
-            Metode Pembayaran <span className="required">*</span>
-          </label>
-          <select
-            name="paymentMethod"
-            required
-            value={form.paymentMethod}
-            onChange={handleChange}>
-            {PAYMENT_METHODS.map((m) => (
-              <option key={m.value} value={m.value}>
-                {m.label}
-              </option>
-            ))}
+          <label>Metode Pembayaran <span className="required">*</span></label>
+          <select name="paymentMethod" required value={form.paymentMethod} onChange={handleChange}>
+            {PAYMENT_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
           </select>
-          <p className="form-hint">
-            Silahkan mengisi email yang terdaftar di akun Satu Sehat / Plataran
-            Sehat
-          </p>
         </div>
 
-        {/* Voucher Code */}
         {hasActiveVouchers && (
           <div className="form-group">
             <label>Masukkan Voucher (Jika ada)</label>
@@ -392,7 +364,6 @@ export default function RegistrationForm() {
                 placeholder="PROMO2024"
                 value={voucherInput}
                 onChange={(e) => setVoucherInput(e.target.value.toUpperCase())}
-                onBlur={handleVoucherCheck}
                 style={{ flex: 1 }}
               />
               <button
@@ -401,108 +372,30 @@ export default function RegistrationForm() {
                 style={{
                   padding: "0 15px",
                   borderRadius: "8px",
-                  border: "1px solid #cbd5e1",
+                  border: "none",
                   background: "#15803d",
+                  color: "#fff",
                   fontSize: "13px",
                   cursor: "pointer",
                 }}>
                 Cek
               </button>
             </div>
-            {voucherError && (
-              <p
-                style={{ color: "#ef4444", fontSize: "12px", margin: "4px 0" }}>
-                {voucherError}
-              </p>
-            )}
-            {voucherInfo && (
-              <p
-                style={{
-                  color: "#15803d",
-                  fontSize: "12px",
-                  margin: "4px 0",
-                  fontWeight: "bold",
-                }}>
-                ✓ Voucher digunakan: Potongan{" "}
-                {voucherInfo.discount_type === "percent"
-                  ? `${voucherInfo.discount_value}%`
-                  : `Rp ${voucherInfo.discount_value.toLocaleString("id-ID")}`}
-              </p>
-            )}
+            {voucherError && <p style={{ color: "#ef4444", fontSize: "12px", margin: "4px 0" }}>{voucherError}</p>}
+            {voucherInfo && <p style={{ color: "#15803d", fontSize: "12px", margin: "4px 0", fontWeight: "bold" }}>✓ Voucher digunakan.</p>}
           </div>
         )}
 
-        {/* Informasi Tambahan */}
-        {/* <label className="tour-checkbox-box" htmlFor="tourIkn">
-          <input
-            id="tourIkn"
-            type="checkbox"
-            name="tourIkn"
-            checked={form.tourIkn}
-            onChange={handleChange}
-            style={{ width: "20px", height: "20px", minWidth: "20px" }}
-          />
-          <div className="tour-checkbox-label">
-            <strong>
-              Ya, saya ingin ikut Tour IKN Nusantara (10 April 2026)
-            </strong>
-            <span>
-              One day trip ke Ibu Kota Nusantara sehari sebelum simposium. Biaya
-              terpisah.
-            </span>
-          </div>
-        </label> */}
-
-        {/* Informasi Tambahan */}
-        {/* <div className="form-group">
-          <label>
-            Informasi Tambahan/Pertanyaan
-            <span className="optional">(Opsional)</span>
-          </label>
-          <textarea
-            name="additionalInfo"
-            placeholder="Apakah ada kebutuhan khusus, alergi makanan, atau pertanyaan?"
-            value={form.additionalInfo}
-            onChange={handleChange}
-          />
-        </div> */}
-
-        {/* NIK duplicate error */}
         {nikError && (
-          <div
-            style={{
-              background: "#fff7ed",
-              border: "1px solid #fed7aa",
-              borderRadius: 10,
-              padding: "14px 16px",
-              fontSize: 14,
-              color: "#9a3412",
-              lineHeight: 1.6,
-            }}>
+          <div style={{ background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 10, padding: "14px 16px", fontSize: 14, color: "#9a3412", marginBottom: 15 }}>
             <strong>⚠️ NIK sudah terdaftar.</strong>
             <br />
-            NIK ini telah digunakan untuk mendaftar sebelumnya. Silakan cek
-            email pendaftaran di <strong>{nikError.maskedEmail}</strong> untuk
-            melanjutkan pembayaran.
-            <br />
-            <a
-              href={`/payment/${nikError.registrationCode}`}
-              style={{
-                display: "inline-block",
-                marginTop: 8,
-                color: "#c2410c",
-                fontWeight: 600,
-                textDecoration: "underline",
-              }}>
-              → Buka halaman pembayaran pendaftaran ini
-            </a>
+            Silakan cek email di <strong>{nikError.maskedEmail}</strong> atau <a href={`/payment/${nikError.registrationCode}`} style={{ color: "#c2410c", fontWeight: 600 }}>klik di sini</a>.
           </div>
         )}
 
-        {/* Generic error message */}
         {error && <div className="form-error">⚠️ {error}</div>}
 
-        {/* Submit */}
         <button type="submit" className="submit-btn" disabled={loading}>
           {loading ? "Memproses..." : "Daftar & Bayar Sekarang →"}
         </button>
