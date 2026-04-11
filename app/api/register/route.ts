@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     const countRes = await pool.query(
       "SELECT COUNT(*) as count FROM registrations WHERE status != 'cancelled'",
     );
-    if (parseInt(countRes.rows[0].count) >= 990) {
+    if (parseInt(countRes.rows[0].count) >= 995) {
       return NextResponse.json(
         {
           message:
@@ -53,15 +53,15 @@ export async function POST(req: Request) {
       );
     }
 
-    if (validated.attendanceType === "offline") {
-      return NextResponse.json(
-        {
-          message:
-            "Pendaftaran Offline sudah ditutup. Silahkan pilih tipe Daring (Online).",
-        },
-        { status: 400 },
-      );
-    }
+    // if (validated.attendanceType === "offline") {
+    //   return NextResponse.json(
+    //     {
+    //       message:
+    //         "Pendaftaran Offline sudah ditutup. Silahkan pilih tipe Daring (Online).",
+    //     },
+    //     { status: 400 },
+    //   );
+    // }
 
     // Check NIK uniqueness before creating anything
     const existingByNIK = await getRegistrationByNIK(validated.nik);

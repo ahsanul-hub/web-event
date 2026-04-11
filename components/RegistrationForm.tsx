@@ -27,7 +27,7 @@ const initialState: FormState = {
   email: "",
   phone: "",
   profession: "Dokter Umum",
-  attendanceType: "online",
+  attendanceType: "offline",
   paymentMethod: "qris",
   tourIkn: true,
   additionalInfo: "",
@@ -48,7 +48,8 @@ const PRICING_MAP: Record<string, number> = {
 };
 
 const ATTENDANCE_TYPES = [
-  { value: "online", label: "Daring (Online) Khusus Domisili Luar Balikpapan" },
+  { value: "offline", label: "Luring (Offline)" },
+  // { value: "online", label: "Daring (Online) Khusus Domisili Luar Balikpapan" },
 ];
 
 const PAYMENT_METHODS = [
