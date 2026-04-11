@@ -8,6 +8,9 @@ export default function ReminderManager() {
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
 
+  const [offset, setOffset] = useState("0");
+  const [limit, setLimit] = useState("");
+
   const [progress, setProgress] = useState({
     total: 0,
     current: 0,
@@ -51,7 +54,7 @@ export default function ReminderManager() {
       // BATCH SEND (Normal or Retry)
       if (
         !idsToRetry &&
-        !confirm("Kirim email reminder ke SELURUH peserta yang sudah membayar?")
+        !confirm("Kirim email reminder ke peserta yang dipilih?")
       ) {
         setLoading(false);
         return;
@@ -60,18 +63,22 @@ export default function ReminderManager() {
       let allIds = idsToRetry || [];
 
       if (!idsToRetry) {
-        const resList = await fetch("/api/admin/registrations?status=paid");
+        let url = "/api/admin/registrations?status=paid";
+        if (offset && offset !== "0") url += `&offset=${offset}`;
+        if (limit) url += `&limit=${limit}`;
+
+        const resList = await fetch(url);
         const allPaid = await resList.json();
         allIds = allPaid.map((p: any) => p.id);
       }
 
       if (allIds.length === 0) {
-        setMessage("Tidak ada peserta found.");
+        setMessage("Tidak ada peserta ditemukan pada rentang ini.");
         setLoading(false);
         return;
       }
 
-      const chunkSize = 5; // Dikurangi dari 10 menjadi 5 agar lebih aman
+      const chunkSize = 5; 
       const total = allIds.length;
       let totalSent = 0;
       let totalFailed = 0;
@@ -110,7 +117,6 @@ export default function ReminderManager() {
 
           setFailedList([...collectedFailed]);
 
-          // Jeda ditambah menjadi 2 detik agar tidak dianggap spamming oleh Resend
           if (i + chunkSize < allIds.length) {
             await new Promise((r) => setTimeout(r, 2000));
           }
@@ -139,7 +145,7 @@ export default function ReminderManager() {
           paddingBottom: "10px",
           marginBottom: "20px",
         }}>
-        Konfirgurasi Email Reminder (Paid Participants)
+        Konfigurasi Email Reminder
       </h3>
 
       <div
@@ -149,6 +155,118 @@ export default function ReminderManager() {
           borderRadius: "10px",
           border: "1px solid #e2e8f0",
         }}>
+        {/* Test Send Section */}
+        <div
+          style={{
+            marginBottom: "20px",
+            paddingBottom: "20px",
+            borderBottom: "1px solid #e2e8f0",
+          }}>
+          <label
+            style={{
+              fontSize: "12px",
+              fontWeight: "bold",
+              display: "block",
+              marginBottom: "10px",
+            }}>
+            Uji Coba Kirim (Single Email)
+          </label>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <input
+              type="email"
+              placeholder="email@contoh.com"
+              value={testEmail}
+              onChange={(e) => setTestEmail(e.target.value)}
+              style={{
+                flex: 1,
+                padding: "10px 12px",
+                borderRadius: "8px",
+                border: "1px solid #cbd5e1",
+                fontSize: "14px",
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => handleSend(false)}
+              disabled={loading}
+              style={{
+                background: "#64748b",
+                color: "white",
+                padding: "10px 20px",
+                borderRadius: "8px",
+                border: "none",
+                fontWeight: "bold",
+                cursor: loading ? "not-allowed" : "pointer",
+                fontSize: "13px",
+              }}>
+              Test Kirim
+            </button>
+          </div>
+        </div>
+
+        {/* Batch Filter Section */}
+        <div
+          style={{
+            marginBottom: "20px",
+            paddingBottom: "20px",
+            borderBottom: "1px solid #e2e8f0",
+          }}>
+          <label
+            style={{
+              fontSize: "12px",
+              fontWeight: "bold",
+              display: "block",
+              marginBottom: "10px",
+            }}>
+            Filter Batch Pengiriman
+          </label>
+          <div style={{ display: "flex", gap: "15px", flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: "120px" }}>
+              <span style={{ fontSize: "11px", color: "#64748b" }}>
+                Mulai dari (Skip/Offset)
+              </span>
+              <input
+                type="number"
+                placeholder="0"
+                value={offset}
+                onChange={(e) => setOffset(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                  fontSize: "14px",
+                  marginTop: "4px",
+                }}
+              />
+            </div>
+            <div style={{ flex: 1, minWidth: "120px" }}>
+              <span style={{ fontSize: "11px", color: "#64748b" }}>
+                Jumlah Data (Limit)
+              </span>
+              <input
+                type="number"
+                placeholder="Kosongkan untuk semua"
+                value={limit}
+                onChange={(e) => setLimit(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid #cbd5e1",
+                  fontSize: "14px",
+                  marginTop: "4px",
+                }}
+              />
+            </div>
+          </div>
+          <p
+            style={{ fontSize: "11px", color: "#94a3b8", marginTop: "10px" }}>
+            *Gunakan filter ini untuk mengirim ke data yang berada di tengah
+            atau melanjutkan pengiriman yang terputus.
+          </p>
+        </div>
+
         {/* Progress Bar (Visible during batch) */}
         {loading && progress.total > 0 && (
           <div
@@ -264,66 +382,8 @@ export default function ReminderManager() {
           </div>
         )}
 
-        {/* Test Send Section */}
-        <div
-          style={{
-            marginBottom: "20px",
-            paddingBottom: "20px",
-            borderBottom: "1px solid #e2e8f0",
-          }}>
-          <label
-            style={{
-              fontSize: "12px",
-              fontWeight: "bold",
-              display: "block",
-              marginBottom: "10px",
-            }}>
-            Uji Coba Kirim (Single Email)
-          </label>
-          <div style={{ display: "flex", gap: "10px" }}>
-            <input
-              type="email"
-              placeholder="email@contoh.com"
-              value={testEmail}
-              onChange={(e) => setTestEmail(e.target.value)}
-              style={{
-                flex: 1,
-                padding: "10px 12px",
-                borderRadius: "8px",
-                border: "1px solid #cbd5e1",
-                fontSize: "14px",
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => handleSend(false)}
-              disabled={loading}
-              style={{
-                background: "#64748b",
-                color: "white",
-                padding: "10px 20px",
-                borderRadius: "8px",
-                border: "none",
-                fontWeight: "bold",
-                cursor: loading ? "not-allowed" : "pointer",
-                fontSize: "13px",
-              }}>
-              Test Kirim
-            </button>
-          </div>
-        </div>
-
         {/* Batch Send Section */}
         <div>
-          <label
-            style={{
-              fontSize: "12px",
-              fontWeight: "bold",
-              display: "block",
-              marginBottom: "10px",
-            }}>
-            Kirim Massal (Semua Peserta Lunas)
-          </label>
           <button
             type="button"
             onClick={() => handleSend(true)}

@@ -11,16 +11,34 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
+    const limit = searchParams.get("limit");
+    const offset = searchParams.get("offset");
+    const search = searchParams.get("search");
 
     let query = "SELECT * FROM registrations WHERE status != 'cancelled'";
-    const params: string[] = [];
+    const params: any[] = [];
 
     if (status) {
-      query += " AND status = $1";
       params.push(status);
+      query += ` AND status = $${params.length}`;
     }
 
-    query += " ORDER BY created_at DESC";
+    if (search) {
+      params.push(`%${search}%`);
+      query += ` AND (full_name ILIKE $${params.length} OR email ILIKE $${params.length} OR institution ILIKE $${params.length})`;
+    }
+
+    query += " ORDER BY created_at DESC ";
+
+    if (limit) {
+      params.push(parseInt(limit));
+      query += ` LIMIT $${params.length}`;
+    }
+
+    if (offset) {
+      params.push(parseInt(offset));
+      query += ` OFFSET $${params.length}`;
+    }
 
     const result = await pool.query(query, params);
     return NextResponse.json(result.rows);
