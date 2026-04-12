@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     const countRes = await pool.query(
       "SELECT COUNT(*) as count FROM registrations WHERE status != 'cancelled'",
     );
-    if (parseInt(countRes.rows[0].count) >= 995) {
+    if (parseInt(countRes.rows[0].count) >= 991) {
       return NextResponse.json(
         {
           message:
